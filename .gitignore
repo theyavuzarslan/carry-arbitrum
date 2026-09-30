@@ -1,0 +1,7 @@
+node_modules/
+.env
+.state/
+contracts/out/
+contracts/cache/
+contracts/lib/
+*.log

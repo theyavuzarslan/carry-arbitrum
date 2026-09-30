@@ -1,0 +1,27 @@
+{
+  "name": "arbitrum-carry-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Onchain carry trade bot for Arbitrum: scans lending, perps and staking markets for carry, scans wallets for carry you are missing, and executes through Aave v3, Compound v3, Uniswap v3 and GMX v2.",
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "scan": "node src/cli.ts scan",
+    "wallet": "node src/cli.ts wallet",
+    "plan": "node src/cli.ts plan",
+    "execute": "node src/cli.ts execute",
+    "run": "node src/cli.ts run",
+    "serve": "node src/cli.ts serve",
+    "demo": "node src/cli.ts demo",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts",
+    "test:contracts": "cd contracts && forge test --fork-url ${ARB_RPC_URL:-https://arb1.arbitrum.io/rpc} -vv"
+  },
+  "dependencies": {
+    "viem": "^2.38.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
