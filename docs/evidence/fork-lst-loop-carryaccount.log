@@ -1,0 +1,43 @@
+5.0x wstETH loop on aave-v3 (e-mode 7)
+wstETH stakes at 2.27%; WETH borrows at 2.12%. Looping 5.0x earns the spread 5.0 times over on the staking side and pays it 4.0 times on the debt.
+net  0.89% (gross  2.86%, costs  1.97%), risk C/61: 5.0x gross leverage (+28); liquidation after a 17% adverse move (+18); thin staking-vs-borrow spread; a WETH rate spike flips it negative (+12); wstETH depeg vs ETH (+3)
+
+legs:
+  supply      aave-v3      wstETH                     ×5.00   2.27%  (2.27% staking, e-mode 7)
+  borrow      aave-v3      WETH                       ×4.00  -2.12%
+  swap        uniswap-v3   WETH→wstETH                ×4.00   0.00%
+fork http://127.0.0.1:8547 at block 510338720, account 0xaf8ef9a1de51505aa16424940a3bf1e448f61b19
+  [fund] ✓ wrap 3028744667843486837 wei ETH → WETH  (gas 57975)
+  [fund] ✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+  [fund] ✓ swap 3028744667843486837 WETH → ≥8075661924 USDC via WETH/USDC fees 500  (gas 176704)
+  funded 0xaf8ef9a1de51505aa16424940a3bf1e448f61b19 with 8157.234267 USDC (bought on the forked Uniswap pool) + gas ETH
+✓ approve USDC for Uniswap (exact amount)  (gas 55461)
+✓ swap 7999913121 USDC → ≥2370705069560936135 wstETH via USDC/WETH/wstETH fees 500/100  (gas 333473)
+✓ deploy CarryAccount at 0x3fa0bd1792510020c96c806a4f86b87d648d42ff  (gas 2126105)
+✓ approve wstETH for CarryAccount (exact)  (gas 51299)
+✓ CarryAccount.openLoop 5x in one flash-loan tx  (gas 858043)
+loop open: collateral $39974, debt $32004, HF 1.199, leverage 5.02x
+
+sent 5 transactions for $8000:
+note: 5x wstETH loop in 8 rounds; the CarryAccount contract does the same in one flash-loan transaction.
+
+after: {
+ "usdc": "0",
+ "weth": "0",
+ "eth": "0",
+ "aave": {
+  "collateralUsd": 39973.82652494,
+  "debtUsd": 32003.71053457,
+  "healthFactor": 1.1990757578715865,
+  "supplied": {
+   "wstETH": "11.910880611434018609"
+  },
+  "borrowed": {
+   "WETH": "11.874040413494435959"
+  }
+ },
+ "gmxPendingOrders": [],
+ "tokens": {
+  "carryAccount": "0x3fa0bd1792510020c96c806a4f86b87d648d42ff"
+ }
+}

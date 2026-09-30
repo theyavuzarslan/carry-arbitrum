@@ -1,0 +1,112 @@
+5.0x wstETH loop on compound-v3
+wstETH stakes at 2.27%; WETH borrows at 1.46%. Looping 5.0x earns the spread 5.0 times over on the staking side and pays it 4.0 times on the debt.
+net  3.52% (gross  5.49%, costs  1.97%), risk C/62: 5.0x gross leverage (+28); liquidation after a 14% adverse move (+21); capacity 106k USD (+10); wstETH depeg vs ETH (+3)
+
+legs:
+  supply      compound-v3  wstETH                     ×5.00   2.27%  (2.27% staking)
+  borrow      compound-v3  WETH                       ×4.00  -1.46%
+  swap        uniswap-v3   WETH→wstETH                ×4.00   0.00%
+fork http://127.0.0.1:8547 at block 510339667, account 0xbeda7ead5a1ec8b948597f8bd5ab5b5915c7a9ea
+  [fund] ✓ wrap 3026735868877231894 wei ETH → WETH  (gas 57975)
+  [fund] ✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+  [fund] ✓ swap 3026735868877231894 WETH → ≥8074494164 USDC via WETH/USDC fees 500  (gas 147561)
+  funded 0xbeda7ead5a1ec8b948597f8bd5ab5b5915c7a9ea with 8156.054712 USDC (bought on the forked Uniswap pool) + gas ETH
+✓ approve USDC for Uniswap (exact amount)  (gas 55449)
+✓ swap 8000000000 USDC → ≥2369859654292984211 wstETH via USDC/WETH/wstETH fees 500/100  (gas 302398)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 2381610739626210797 wstETH to Compound  (gas 145957)
+✓ withdraw 2350787418185000000 WETH from Compound (borrows if base)  (gas 153273)
+✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+✓ swap 2350787418185000000 WETH → ≥1878278856032358419 wstETH via WETH/wstETH fees 100  (gas 141684)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 1887564208841098657 wstETH to Compound  (gas 110369)
+✓ withdraw 1861823635203000000 WETH from Compound (borrows if base)  (gas 145513)
+✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+✓ swap 1861823635203000000 WETH → ≥1487604038203282094 wstETH via WETH/wstETH fees 100  (gas 132068)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 1494853701476568008 wstETH to Compound  (gas 110369)
+✓ withdraw 1474564319081000000 WETH from Compound (borrows if base)  (gas 145513)
+✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+✓ swap 1474564319081000000 WETH → ≥1178185852178188773 wstETH via WETH/wstETH fees 100  (gas 205949)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 1183863195110240454 wstETH to Compound  (gas 110369)
+✓ withdraw 1167854940712000000 WETH from Compound (borrows if base)  (gas 145501)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 1167854940712000000 WETH → ≥933125314396283776 wstETH via WETH/wstETH fees 100  (gas 133008)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 937581408390238095 wstETH to Compound  (gas 110369)
+✓ withdraw 924941113044000000 WETH from Compound (borrows if base)  (gas 153602)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 924941113044000000 WETH → ≥739036578475377599 wstETH via WETH/wstETH fees 100  (gas 133008)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 742540483318553615 wstETH to Compound  (gas 110369)
+✓ withdraw 732553361531000000 WETH from Compound (borrows if base)  (gas 145513)
+✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+✓ swap 732553361531000000 WETH → ≥585317804086139309 wstETH via WETH/wstETH fees 100  (gas 205965)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 588077013093208986 wstETH to Compound  (gas 110369)
+✓ withdraw 580182262332000000 WETH from Compound (borrows if base)  (gas 145501)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 580182262332000000 WETH → ≥463572223933591570 wstETH via WETH/wstETH fees 100  (gas 133000)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 465746499834782134 wstETH to Compound  (gas 110369)
+✓ withdraw 459504351767000000 WETH from Compound (borrows if base)  (gas 145513)
+✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+✓ swap 459504351767000000 WETH → ≥367149529476537636 wstETH via WETH/wstETH fees 100  (gas 133012)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 368863895793660497 wstETH to Compound  (gas 110369)
+✓ withdraw 363927446600000000 WETH from Compound (borrows if base)  (gas 145501)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 363927446600000000 WETH → ≥290782633164722072 wstETH via WETH/wstETH fees 100  (gas 133000)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 292135606445398988 wstETH to Compound  (gas 110369)
+✓ withdraw 288230537707000000 WETH from Compound (borrows if base)  (gas 153590)
+✓ approve WETH for Uniswap (exact amount)  (gas 53440)
+✓ swap 288230537707000000 WETH → ≥230299974569235264 wstETH via WETH/wstETH fees 100  (gas 132988)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 231368515563959764 wstETH to Compound  (gas 110369)
+✓ withdraw 228278585864000000 WETH from Compound (borrows if base)  (gas 145501)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 228278585864000000 WETH → ≥182397660840583961 wstETH via WETH/wstETH fees 100  (gas 132994)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 183242054863208715 wstETH to Compound  (gas 110369)
+✓ withdraw 180796640004000000 WETH from Compound (borrows if base)  (gas 153602)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 180796640004000000 WETH → ≥144458998182460932 wstETH via WETH/wstETH fees 100  (gas 132994)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 145126572455252931 wstETH to Compound  (gas 110369)
+✓ withdraw 143190938883000000 WETH from Compound (borrows if base)  (gas 145513)
+✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+✓ swap 143190938883000000 WETH → ≥114411558423492036 wstETH via WETH/wstETH fees 100  (gas 133006)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 114939533449700177 wstETH to Compound  (gas 110369)
+✓ withdraw 113407223596000000 WETH from Compound (borrows if base)  (gas 153602)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 113407223596000000 WETH → ≥90613974258532567 wstETH via WETH/wstETH fees 100  (gas 132994)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51311)
+✓ supply 91031663925406252 wstETH to Compound  (gas 110369)
+✓ withdraw 89818521088000000 WETH from Compound (borrows if base)  (gas 145501)
+✓ approve WETH for Uniswap (exact amount)  (gas 53452)
+✓ swap 89818521088000000 WETH → ≥71766280149609541 wstETH via WETH/wstETH fees 100  (gas 132982)
+✓ approve wstETH for 0x6f7D51 (exact amount)  (gas 51299)
+✓ supply 72096797715167050 wstETH to Compound  (gas 110360)
+
+sent 79 transactions for $8000:
+note: 5x wstETH loop in 15 rounds; the CarryAccount contract does the same in one flash-loan transaction.
+
+after: {
+ "usdc": "156.054712",
+ "weth": "0",
+ "eth": "2.964836674487639188",
+ "aave": {
+  "collateralUsd": 0,
+  "debtUsd": 0,
+  "healthFactor": "Infinity",
+  "supplied": {},
+  "borrowed": {}
+ },
+ "gmxPendingOrders": [],
+ "tokens": {
+  "USDC": "156.054712"
+ }
+}

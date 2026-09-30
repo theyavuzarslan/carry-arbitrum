@@ -1,0 +1,47 @@
+Borrow WETH on aave-v3, sell, long ETH/USD [ETH-ETH]
+GMX pays ETH longs 17.05%/yr while WETH costs 2.12% to borrow. Short spot via aave-v3, long the perp, keep the USDC earning 3.00%.
+net  9.69% (gross  11.12%, costs  1.44%), risk B/25: funding 26.9pp above CEX average (mean-reversion risk) (+16); ETH-margined long pool: funding flips fast when OI rebalances (+6); 1.5x gross leverage (+3)
+
+legs:
+  supply      aave-v3      USDC                       ×1.48   3.00%  (capital + sale proceeds)
+  borrow      aave-v3      WETH                       ×0.72  -2.12%  (includes the coin margin)
+  swap        uniswap-v3   WETH→USDC                  ×0.48   0.00%
+  long-perp   gmx-v2       ETH/USD [ETH-ETH]          ×0.48   17.05%  (2x, WETH margin)
+fork http://127.0.0.1:8547 at block 510339192, account 0x7b81273ebbd8822fb753ac93395231122b8dc36e
+  [fund] ✓ wrap 3785194353373642517 wei ETH → WETH  (gas 57975)
+  [fund] ✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+  [fund] ✓ swap 3785194353373642517 WETH → ≥10092505864 USDC via WETH/USDC fees 500  (gas 176704)
+  funded 0x7b81273ebbd8822fb753ac93395231122b8dc36e with 10194.450368 USDC (bought on the forked Uniswap pool) + gas ETH
+✓ approve USDC for Aave (exact amount)  (gas 55449)
+✓ supply 10000000000 USDC to Aave  (gas 237866)
+✓ borrow 2679594244214000000 WETH from Aave  (gas 293536)
+✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+✓ swap 1786485482617473800 WETH → ≥4788879158 USDC via WETH/USDC fees 500  (gas 135282)
+✓ approve USDC for Aave (exact amount)  (gas 55461)
+✓ supply 5005511907 USDC to Aave  (gas 168382)
+✓ approve WETH for GMX Router (exact amount)  (gas 53464)
+✓ GMX increase LONG $4815 with 893108761596526200 WETH collateral  (gas 898720)
+
+sent 9 transactions for $10000:
+note: Short $7222 of WETH via aave-v3, long $4815 on GMX. Target HF 1.60.
+
+after: {
+ "usdc": "0",
+ "weth": "0",
+ "eth": "2.207064381539257664",
+ "aave": {
+  "collateralUsd": 15004.96518402,
+  "debtUsd": 7222.22235173,
+  "healthFactor": 1.620536210814954,
+  "supplied": {
+   "USDC": "15005.512285"
+  },
+  "borrowed": {
+   "WETH": "2.67959429226395906"
+  }
+ },
+ "gmxPendingOrders": [
+  "0xca974234f19ca3380eb75e6b65d988387124a9a7b2cf43f597cea6a6407d1de7"
+ ],
+ "tokens": {}
+}

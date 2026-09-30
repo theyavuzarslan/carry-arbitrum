@@ -1,0 +1,37 @@
+Long ARB / short ARB/USD [ARB-USDC] on GMX
+GMX pays ARB shorts 14.91%/yr. Hold ARB (0.09%) against a 2x short so price moves cancel and the funding is the return.
+net  4.14% (gross  10.00%, costs  5.86%), risk A/13: funding 11.1pp above CEX average (mean-reversion risk) (+7); ARB is volatile and thinner (+6)
+
+legs:
+  swap        uniswap-v3   USDC→ARB                   ×0.67   0.00%
+  supply      aave-v3      ARB                        ×0.67   0.09%  (ARB earns 0.09% supply + 0.00% native)
+  short-perp  gmx-v2       ARB/USD [ARB-USDC]         ×0.67   14.91%  (2x, USDC margin)
+fork http://127.0.0.1:8547 at block 510337911, account 0x2f6499ba8c9b4d40570a29d7e9050dc9bc0086e7
+  [fund] ✓ wrap 3785622800503627872 wei ETH → WETH  (gas 57975)
+  [fund] ✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+  [fund] ✓ swap 3785622800503627872 WETH → ≥10093862586 USDC via WETH/USDC fees 500  (gas 176692)
+  funded 0x2f6499ba8c9b4d40570a29d7e9050dc9bc0086e7 with 10195.820794 USDC (bought on the forked Uniswap pool) + gas ETH
+✓ approve USDC for Uniswap (exact amount)  (gas 55461)
+✓ swap 6666666667 USDC → ≥32501127274509855342432 ARB via USDC/WETH/ARB fees 500/500  (gas 308056)
+✓ approve ARB for Aave (exact amount)  (gas 53576)
+✓ supply 32667920859485629165448 ARB to Aave  (gas 176781)
+✓ approve USDC for GMX Router (exact amount)  (gas 55449)
+✓ GMX increase SHORT $6667 with 3529154127 USDC collateral  (gas 905265)
+
+sent 6 transactions for $10000:
+note: $6667 of ARB hedged by a $6667 GMX short on 2x with $3333 USDC margin.
+
+after: {
+ "usdc": "0",
+ "weth": "0",
+ "eth": "2.207021253587034741",
+ "aave": {
+  "collateralUsd": 0,
+  "debtUsd": 0,
+  "healthFactor": "Infinity"
+ },
+ "gmxPendingOrders": [
+  "0xf98d0c1c657e67bdb43292b822bfbb38d98a5c1a82ca7bb65cd7b6ce5fe445eb"
+ ],
+ "tokens": {}
+}
