@@ -3,5 +3,4 @@ node_modules/
 .state/
 contracts/out/
 contracts/cache/
-contracts/lib/
 *.log

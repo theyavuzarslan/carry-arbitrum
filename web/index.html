@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carry · Onchain carry desk</title>
+  <meta name="description" content="Carry: onchain carry-trade desk for Arbitrum. Funding, basis, rate and FX carry, ranked by net APR and risk.">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B1220'/%3E%3Cpath d='M8 21l6-10 4 6 3-4 3 8' stroke='%2328A0F0' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" class="logo-bg"/><path d="M8 21l6-10 4 6 3-4 3 8" class="logo-line"/></svg>
+      <div>
+        <div class="brand-name">Carry</div>
+        <div class="brand-tag">Onchain carry desk for Arbitrum</div>
+      </div>
+    </div>
+    <div class="status">
+      <span id="demo-badge" class="pill pill-demo" hidden>Demo data</span>
+      <span id="freshness" class="freshness" aria-live="polite">Loading…</span>
+      <span id="source-errors" class="source-errors"></span>
+      <span id="bot-pill" class="pill">Bot: …</span>
+      <button id="refresh" class="btn btn-ghost" type="button" aria-label="Refresh data">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="icon"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-board" aria-controls="panel-board" aria-selected="true" data-tab="board">Opportunities</button>
+    <button role="tab" id="tab-markets" aria-controls="panel-markets" aria-selected="false" tabindex="-1" data-tab="markets">Markets</button>
+    <button role="tab" id="tab-wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1" data-tab="wallet">Wallet</button>
+    <button role="tab" id="tab-bot" aria-controls="panel-bot" aria-selected="false" tabindex="-1" data-tab="bot">Bot</button>
+  </nav>
+
+  <main id="main">
+    <section id="panel-board" role="tabpanel" aria-labelledby="tab-board" class="panel">
+      <div id="board-summary" class="kpis"></div>
+      <div class="filters" id="filters">
+        <div class="filter-group" id="strategy-chips" role="group" aria-label="Filter by strategy"></div>
+        <div class="filter-row">
+          <label class="toggle"><input type="checkbox" id="f-exec"> <span>Executable only</span></label>
+          <label class="range">
+            <span>Min net APR <output id="f-minapr-out">0.0%</output></span>
+            <input type="range" id="f-minapr" min="-5" max="20" step="0.5" value="0">
+          </label>
+          <label class="select">
+            <span>Max risk</span>
+            <select id="f-maxrisk">
+              <option value="D">D (all)</option>
+              <option value="C">C or better</option>
+              <option value="B">B or better</option>
+              <option value="A">A only</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="board-error"></div>
+      <div id="board" class="cards"></div>
+    </section>
+
+    <section id="panel-markets" role="tabpanel" aria-labelledby="tab-markets" class="panel" hidden>
+      <div id="markets-error"></div>
+      <div class="card-block">
+        <div class="block-head">
+          <h2>Perp carry curve</h2>
+          <p class="muted">Top 15 by short carry and by long carry, annualized. Right of zero receives, left pays.</p>
+        </div>
+        <div id="curve" class="curve"></div>
+      </div>
+      <div class="card-block">
+        <div class="block-head"><h2>Perps</h2><p class="muted">Click a column header to sort.</p></div>
+        <div class="table-wrap"><table id="t-perps" class="data"></table></div>
+      </div>
+      <div class="card-block">
+        <div class="block-head"><h2>Lending</h2></div>
+        <div class="table-wrap"><table id="t-lending" class="data"></table></div>
+      </div>
+      <div class="card-block">
+        <div class="block-head"><h2>Fixed yield</h2><p class="muted">Pendle PT markets.</p></div>
+        <div class="table-wrap"><table id="t-fixed" class="data"></table></div>
+      </div>
+      <div class="card-block" id="hold-yields-block">
+        <div class="block-head"><h2>Hold yields</h2></div>
+        <div class="table-wrap"><table id="t-hold" class="data"></table></div>
+      </div>
+    </section>
+
+    <section id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" class="panel" hidden>
+      <form id="wallet-form" class="wallet-form">
+        <label for="wallet-addr">Wallet address</label>
+        <div class="input-row">
+          <input id="wallet-addr" name="address" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x…" pattern="^0x[a-fA-F0-9]{40}$">
+          <button class="btn btn-primary" type="submit">Analyze</button>
+        </div>
+      </form>
+      <div id="wallet-out"></div>
+    </section>
+
+    <section id="panel-bot" role="tabpanel" aria-labelledby="tab-bot" class="panel" hidden>
+      <div id="bot-out"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Rates are annualized. Positive carry receives, negative pays. Not investment advice.</span>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,922 @@
+{
+  "asOf": "2026-09-30T11:42:08.000Z",
+  "opportunities": [
+    {
+      "id": "funding-spread:ETH:gmx-v2/hyperliquid",
+      "strategy": "funding-spread",
+      "scope": "market",
+      "title": "ETH funding spread: long GMX, short Hyperliquid",
+      "thesis": "Same underlying, two venues. GMX [ETH-ETH] longs receive 17% while Hyperliquid shorts receive 4.1%; delta-neutral across venues.",
+      "legs": [
+        {
+          "action": "long-perp",
+          "venue": "gmx-v2",
+          "symbol": "ETH",
+          "weight": 0.5,
+          "apr": 0.17
+        },
+        {
+          "action": "short-perp",
+          "venue": "hyperliquid",
+          "symbol": "ETH",
+          "weight": 0.5,
+          "apr": 0.041
+        }
+      ],
+      "grossApr": 0.1055,
+      "costApr": 0.0141,
+      "netApr": 0.0914,
+      "leverage": 1.0,
+      "capacityUsd": 1800000,
+      "risk": {
+        "score": 72,
+        "grade": "D",
+        "liquidationMovePct": 0.45,
+        "factors": [
+          "Cross-venue margin: one leg can be liquidated while the other profits",
+          "Hyperliquid is off Arbitrum (bridge latency)",
+          "Funding spreads mean-revert"
+        ]
+      },
+      "executable": false,
+      "whyNotExecutable": "Hyperliquid leg has no transaction builder in this bot.",
+      "params": {
+        "rebalanceBandPct": 0.1
+      }
+    },
+    {
+      "id": "basis:gmx-v2:DOGE/USD:short",
+      "strategy": "basis",
+      "scope": "market",
+      "title": "DOGE short carry on GMX (unhedged spot unavailable)",
+      "thesis": "DOGE shorts receive 9.8%/yr but no liquid DOGE spot exists on Arbitrum to hedge.",
+      "legs": [
+        {
+          "action": "short-perp",
+          "venue": "gmx-v2",
+          "symbol": "DOGE",
+          "weight": 1,
+          "apr": 0.098
+        }
+      ],
+      "grossApr": 0.098,
+      "costApr": 0.0071,
+      "netApr": 0.0909,
+      "leverage": 1.0,
+      "capacityUsd": 380000,
+      "risk": {
+        "score": 88,
+        "grade": "D",
+        "liquidationMovePct": 0.9,
+        "factors": [
+          "Naked short: full DOGE price exposure",
+          "Meme-coin volatility"
+        ]
+      },
+      "executable": false,
+      "whyNotExecutable": "No spot hedge venue for DOGE on Arbitrum.",
+      "params": {
+        "hedgeRatio": 0
+      }
+    },
+    {
+      "id": "basis:gmx-v2:SOL/USD:short",
+      "strategy": "basis",
+      "scope": "market",
+      "title": "SOL cash-and-carry: hold SOL, short GMX SOL/USD",
+      "thesis": "GMX v2 SOL/USD shorts receive 15.6%/yr in funding net of borrow fees as longs dominate open interest. Hold spot SOL (wrapped) as the delta hedge.",
+      "legs": [
+        {
+          "action": "swap",
+          "venue": "uniswap-v3",
+          "symbol": "USDC\u2192SOL",
+          "weight": 0.5,
+          "apr": 0
+        },
+        {
+          "action": "hold",
+          "venue": "wallet",
+          "symbol": "SOL",
+          "weight": 0.5,
+          "apr": 0
+        },
+        {
+          "action": "short-perp",
+          "venue": "gmx-v2",
+          "symbol": "SOL",
+          "weight": 0.5,
+          "apr": 0.156,
+          "note": "collateral USDC"
+        }
+      ],
+      "grossApr": 0.078,
+      "costApr": 0.0062,
+      "netApr": 0.0718,
+      "leverage": 1.0,
+      "capacityUsd": 2100000,
+      "risk": {
+        "score": 44,
+        "grade": "B",
+        "liquidationMovePct": 0.82,
+        "factors": [
+          "Funding can flip negative within hours",
+          "Wrapped SOL bridge risk",
+          "GMX open-interest cap may bind"
+        ]
+      },
+      "executable": true,
+      "params": {
+        "hedgeRatio": 1,
+        "perpLeverage": 1,
+        "horizonDays": 30
+      }
+    },
+    {
+      "id": "basis:gmx-v2:ARB/USD:short",
+      "strategy": "basis",
+      "scope": "market",
+      "title": "ARB cash-and-carry: hold ARB, short GMX ARB/USD",
+      "thesis": "ARB/USD shorts on GMX v2 receive ~14.7%/yr. Buy ARB spot and short an equal notional; carry is the funding received minus borrow fees.",
+      "legs": [
+        {
+          "action": "swap",
+          "venue": "uniswap-v3",
+          "symbol": "USDC\u2192ARB",
+          "weight": 0.5,
+          "apr": 0
+        },
+        {
+          "action": "hold",
+          "venue": "wallet",
+          "symbol": "ARB",
+          "weight": 0.5,
+          "apr": 0
+        },
+        {
+          "action": "short-perp",
+          "venue": "gmx-v2",
+          "symbol": "ARB",
+          "weight": 0.5,
+          "apr": 0.147
+        }
+      ],
+      "grossApr": 0.0735,
+      "costApr": 0.0058,
+      "netApr": 0.0677,
+      "leverage": 1.0,
+      "capacityUsd": 940000,
+      "risk": {
+        "score": 41,
+        "grade": "B",
+        "liquidationMovePct": 0.85,
+        "factors": [
+          "Funding regime can reverse",
+          "Thin short-side capacity ($940K)"
+        ]
+      },
+      "executable": true,
+      "params": {
+        "hedgeRatio": 1,
+        "perpLeverage": 1,
+        "horizonDays": 30
+      }
+    },
+    {
+      "id": "reverse-basis:gmx-v2:ETH/USD[ETH-ETH]:long",
+      "strategy": "reverse-basis",
+      "scope": "market",
+      "title": "ETH reverse basis: borrow WETH, long GMX ETH/USD [ETH-ETH]",
+      "thesis": "On the single-sided ETH/USD [ETH-ETH] pool longs receive ~17%/yr because shorts are crowded. Short spot ETH by borrowing WETH on Aave against USDC, sell it, and go long the perp.",
+      "legs": [
+        {
+          "action": "supply",
+          "venue": "aave-v3",
+          "symbol": "USDC",
+          "weight": 0.6,
+          "apr": 0.031
+        },
+        {
+          "action": "borrow",
+          "venue": "aave-v3",
+          "symbol": "WETH",
+          "weight": 0.4,
+          "apr": -0.0198
+        },
+        {
+          "action": "swap",
+          "venue": "uniswap-v3",
+          "symbol": "WETH\u2192USDC",
+          "weight": 0.4,
+          "apr": 0
+        },
+        {
+          "action": "long-perp",
+          "venue": "gmx-v2",
+          "symbol": "ETH",
+          "weight": 0.4,
+          "apr": 0.17
+        }
+      ],
+      "grossApr": 0.07888,
+      "costApr": 0.0114,
+      "netApr": 0.06748,
+      "leverage": 1.4,
+      "capacityUsd": 5600000,
+      "risk": {
+        "score": 57,
+        "grade": "C",
+        "healthFactor": 1.62,
+        "liquidationMovePct": 0.38,
+        "factors": [
+          "Aave debt liquidates on a 38% ETH rally without rebalancing",
+          "Perp funding can normalize quickly",
+          "Two venues to monitor"
+        ]
+      },
+      "executable": true,
+      "params": {
+        "targetHealthFactor": 1.6,
+        "perpLeverage": 1
+      }
+    },
+    {
+      "id": "lend-borrow:aave-v3:USDT->USDC",
+      "strategy": "lend-borrow",
+      "scope": "market",
+      "title": "Rate carry: supply USDC 3.1%, borrow USDT 2.4%",
+      "thesis": "Stable-vs-stable rate carry on Aave v3 with stablecoin e-mode. Small spread, low price risk.",
+      "legs": [
+        {
+          "action": "supply",
+          "venue": "aave-v3",
+          "symbol": "USDC",
+          "weight": 3.0,
+          "apr": 0.031
+        },
+        {
+          "action": "borrow",
+          "venue": "aave-v3",
+          "symbol": "USDT",
+          "weight": 2.0,
+          "apr": -0.024
+        }
+      ],
+      "grossApr": 0.045,
+      "costApr": 0.0031,
+      "netApr": 0.0419,
+      "leverage": 3.0,
+      "capacityUsd": 7300000,
+      "risk": {
+        "score": 22,
+        "grade": "A",
+        "healthFactor": 1.35,
+        "factors": [
+          "USDT depeg",
+          "Rate inversion if USDT utilization spikes"
+        ]
+      },
+      "executable": true,
+      "params": {
+        "eMode": 2
+      }
+    },
+    {
+      "id": "fx-carry:aave-v3:EURS->USDC",
+      "strategy": "fx-carry",
+      "scope": "market",
+      "title": "FX carry: borrow EURS at 0.9%, lend USDC at 3.1%",
+      "thesis": "Classic funding-currency carry. EURS borrow on Aave is cheap relative to USDC supply. Unhedged, the position is short EUR/USD.",
+      "legs": [
+        {
+          "action": "supply",
+          "venue": "aave-v3",
+          "symbol": "USDC",
+          "weight": 1.0,
+          "apr": 0.031
+        },
+        {
+          "action": "borrow",
+          "venue": "aave-v3",
+          "symbol": "EURS",
+          "weight": 0.7,
+          "apr": -0.0092
+        },
+        {
+          "action": "swap",
+          "venue": "uniswap-v3",
+          "symbol": "EURS\u2192USDC",
+          "weight": 0.7,
+          "apr": 0
+        },
+        {
+          "action": "supply",
+          "venue": "aave-v3",
+          "symbol": "USDC",
+          "weight": 0.7,
+          "apr": 0.031
+        }
+      ],
+      "grossApr": 0.04626,
+      "costApr": 0.0068,
+      "netApr": 0.03946,
+      "leverage": 1.7,
+      "capacityUsd": 410000,
+      "risk": {
+        "score": 66,
+        "grade": "C",
+        "healthFactor": 1.45,
+        "liquidationMovePct": 0.22,
+        "factors": [
+          "Unhedged EUR/USD exposure: a 1% EUR rally costs ~0.7% of capital",
+          "EURS liquidity is thin",
+          "Stable depeg"
+        ]
+      },
+      "executable": true,
+      "params": {
+        "hedged": false,
+        "targetHealthFactor": 1.45
+      }
+    },
+    {
+      "id": "fixed-carry:pendle:PT-weETH-26DEC2026",
+      "strategy": "fixed-carry",
+      "scope": "market",
+      "title": "Borrow USDC, buy PT-weETH (Dec 2026) fixed 5.4%",
+      "thesis": "Lock a 5.4% fixed ETH-denominated yield on Pendle while the ETH is hedged via a GMX short; funding on the hedge is a small positive.",
+      "legs": [
+        {
+          "action": "buy-pt",
+          "venue": "pendle",
+          "symbol": "PT-weETH",
+          "weight": 0.5,
+          "apr": 0.054
+        },
+        {
+          "action": "short-perp",
+          "venue": "gmx-v2",
+          "symbol": "ETH",
+          "weight": 0.5,
+          "apr": 0.021
+        }
+      ],
+      "grossApr": 0.0375,
+      "costApr": 0.0049,
+      "netApr": 0.0326,
+      "leverage": 1.0,
+      "capacityUsd": 3200000,
+      "risk": {
+        "score": 49,
+        "grade": "C",
+        "factors": [
+          "PT price risk before maturity",
+          "weETH depeg",
+          "Hedge funding can turn negative"
+        ]
+      },
+      "executable": false,
+      "whyNotExecutable": "No Pendle router builder yet; plan is informational.",
+      "params": {
+        "daysToExpiry": 87,
+        "impliedApr": 0.054
+      }
+    },
+    {
+      "id": "lst-loop:aave-v3:wstETH/WETH:emode1",
+      "strategy": "lst-loop",
+      "scope": "market",
+      "title": "wstETH loop on Aave v3 (ETH e-mode, 4.2x)",
+      "thesis": "Supply wstETH, borrow WETH in ETH-correlated e-mode, swap to wstETH and re-supply. Staking yield 2.3% beats WETH borrow ~2.0%; leverage amplifies the spread plus the wstETH supply rate.",
+      "legs": [
+        {
+          "action": "supply",
+          "venue": "aave-v3",
+          "symbol": "wstETH",
+          "weight": 4.2,
+          "apr": 0.0231,
+          "note": "staking 2.30% + supply 0.01%"
+        },
+        {
+          "action": "borrow",
+          "venue": "aave-v3",
+          "symbol": "WETH",
+          "weight": 3.2,
+          "apr": -0.0198
+        }
+      ],
+      "grossApr": 0.03366,
+      "costApr": 0.0021,
+      "netApr": 0.03156,
+      "leverage": 4.2,
+      "capacityUsd": 18400000,
+      "risk": {
+        "score": 38,
+        "grade": "B",
+        "healthFactor": 1.18,
+        "liquidationMovePct": 0.061,
+        "factors": [
+          "wstETH/ETH depeg of 6.1% liquidates",
+          "WETH borrow rate can spike above staking yield at high utilization",
+          "Swap slippage on unwind"
+        ]
+      },
+      "executable": true,
+      "params": {
+        "eMode": 1,
+        "targetHealthFactor": 1.18,
+        "loops": 5,
+        "swapVenue": "uniswap-v3"
+      }
+    }
+  ],
+  "snapshot": {
+    "lendingCount": 14,
+    "perpCount": 22,
+    "holdYields": [
+      {
+        "symbol": "wstETH",
+        "apr": 0.023,
+        "source": "lido-api",
+        "note": "Lido 7d SMA"
+      },
+      {
+        "symbol": "weETH",
+        "apr": 0.027,
+        "source": "defillama"
+      },
+      {
+        "symbol": "sUSDe",
+        "apr": 0.061,
+        "source": "defillama",
+        "note": "Ethena staked USDe"
+      }
+    ],
+    "errors": [
+      "hyperliquid-api: timeout after 8000ms (using cached)"
+    ]
+  },
+  "markets": {
+    "lending": [
+      {
+        "venue": "aave-v3",
+        "symbol": "USDC",
+        "supplyApr": 0.031,
+        "borrowApr": 0.039,
+        "totalSupplyUsd": 182000000,
+        "totalBorrowUsd": 151000000,
+        "availableUsd": 31000000,
+        "ltv": 0.75,
+        "liqThreshold": 0.78,
+        "canCollateral": true,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "aave-v3",
+        "symbol": "USDT",
+        "supplyApr": 0.019,
+        "borrowApr": 0.024,
+        "totalSupplyUsd": 64000000,
+        "totalBorrowUsd": 49000000,
+        "availableUsd": 15000000,
+        "ltv": 0.75,
+        "liqThreshold": 0.78,
+        "canCollateral": true,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "aave-v3",
+        "symbol": "WETH",
+        "supplyApr": 0.0142,
+        "borrowApr": 0.0198,
+        "totalSupplyUsd": 412000000,
+        "totalBorrowUsd": 318000000,
+        "availableUsd": 94000000,
+        "ltv": 0.8,
+        "liqThreshold": 0.83,
+        "canCollateral": true,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "aave-v3",
+        "symbol": "wstETH",
+        "supplyApr": 0.0001,
+        "borrowApr": 0.0012,
+        "rewardApr": 0.004,
+        "totalSupplyUsd": 268000000,
+        "totalBorrowUsd": 3100000,
+        "availableUsd": 264900000,
+        "ltv": 0.71,
+        "liqThreshold": 0.76,
+        "canCollateral": true,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "aave-v3",
+        "symbol": "WBTC",
+        "supplyApr": 0.0004,
+        "borrowApr": 0.0061,
+        "totalSupplyUsd": 139000000,
+        "totalBorrowUsd": 11000000,
+        "availableUsd": 128000000,
+        "ltv": 0.73,
+        "liqThreshold": 0.78,
+        "canCollateral": true,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "aave-v3",
+        "symbol": "ARB",
+        "supplyApr": 0.0021,
+        "borrowApr": 0.0144,
+        "totalSupplyUsd": 41000000,
+        "totalBorrowUsd": 5200000,
+        "availableUsd": 35800000,
+        "ltv": 0.58,
+        "liqThreshold": 0.63,
+        "canCollateral": true,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "aave-v3",
+        "symbol": "EURS",
+        "supplyApr": 0.0031,
+        "borrowApr": 0.0092,
+        "totalSupplyUsd": 1300000,
+        "totalBorrowUsd": 590000,
+        "availableUsd": 710000,
+        "ltv": 0,
+        "liqThreshold": 0,
+        "canCollateral": false,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "aave-v3",
+        "symbol": "GHO",
+        "supplyApr": 0.0,
+        "borrowApr": 0.0549,
+        "totalSupplyUsd": 0,
+        "totalBorrowUsd": 23000000,
+        "availableUsd": 12000000,
+        "ltv": 0,
+        "liqThreshold": 0,
+        "canCollateral": false,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain"
+      },
+      {
+        "venue": "compound-v3",
+        "symbol": "USDC",
+        "supplyApr": 0.0348,
+        "borrowApr": 0.0441,
+        "rewardApr": 0.006,
+        "totalSupplyUsd": 58000000,
+        "totalBorrowUsd": 49500000,
+        "availableUsd": 8500000,
+        "ltv": 0,
+        "liqThreshold": 0,
+        "canCollateral": false,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain",
+        "cometBase": "USDC"
+      },
+      {
+        "venue": "compound-v3",
+        "symbol": "WETH",
+        "supplyApr": 0.0171,
+        "borrowApr": 0.0224,
+        "totalSupplyUsd": 22000000,
+        "totalBorrowUsd": 17100000,
+        "availableUsd": 4900000,
+        "ltv": 0,
+        "liqThreshold": 0,
+        "canCollateral": false,
+        "canBorrow": true,
+        "executable": true,
+        "source": "onchain",
+        "cometBase": "WETH"
+      },
+      {
+        "venue": "fluid-lending",
+        "symbol": "USDC",
+        "supplyApr": 0.0412,
+        "borrowApr": null,
+        "totalSupplyUsd": 31000000,
+        "totalBorrowUsd": 0,
+        "availableUsd": 6400000,
+        "ltv": 0,
+        "liqThreshold": 0,
+        "canCollateral": false,
+        "canBorrow": false,
+        "executable": false,
+        "source": "defillama"
+      },
+      {
+        "venue": "fluid-lending",
+        "symbol": "USDT",
+        "supplyApr": 0.0388,
+        "borrowApr": null,
+        "totalSupplyUsd": 19000000,
+        "totalBorrowUsd": 0,
+        "availableUsd": 4200000,
+        "ltv": 0,
+        "liqThreshold": 0,
+        "canCollateral": false,
+        "canBorrow": false,
+        "executable": false,
+        "source": "defillama"
+      }
+    ],
+    "perps": [
+      {
+        "venue": "gmx-v2",
+        "symbol": "ETH",
+        "name": "ETH/USD [ETH-ETH]",
+        "markPx": 4218.55,
+        "longCarryApr": 0.17,
+        "shortCarryApr": -0.212,
+        "openInterestLongUsd": 21400000,
+        "openInterestShortUsd": 48200000,
+        "availableLongUsd": 24800000,
+        "availableShortUsd": 6100000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "ETH",
+        "name": "ETH/USD [WETH-USDC]",
+        "markPx": 4218.55,
+        "longCarryApr": -0.064,
+        "shortCarryApr": 0.021,
+        "openInterestLongUsd": 71200000,
+        "openInterestShortUsd": 58100000,
+        "availableLongUsd": 18900000,
+        "availableShortUsd": 31200000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "BTC",
+        "name": "BTC/USD [WBTC-USDC]",
+        "markPx": 112480.2,
+        "longCarryApr": -0.071,
+        "shortCarryApr": 0.034,
+        "openInterestLongUsd": 88100000,
+        "openInterestShortUsd": 64300000,
+        "availableLongUsd": 22000000,
+        "availableShortUsd": 41000000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "SOL",
+        "name": "SOL/USD [SOL-USDC]",
+        "markPx": 211.37,
+        "longCarryApr": -0.198,
+        "shortCarryApr": 0.156,
+        "openInterestLongUsd": 14600000,
+        "openInterestShortUsd": 4100000,
+        "availableLongUsd": 3200000,
+        "availableShortUsd": 2100000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "ARB",
+        "name": "ARB/USD [ARB-USDC]",
+        "markPx": 0.4821,
+        "longCarryApr": -0.183,
+        "shortCarryApr": 0.147,
+        "openInterestLongUsd": 3900000,
+        "openInterestShortUsd": 1200000,
+        "availableLongUsd": 1100000,
+        "availableShortUsd": 940000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "DOGE",
+        "name": "DOGE/USD [WETH-USDC]",
+        "markPx": 0.2413,
+        "longCarryApr": -0.131,
+        "shortCarryApr": 0.098,
+        "openInterestLongUsd": 2800000,
+        "openInterestShortUsd": 900000,
+        "availableLongUsd": 700000,
+        "availableShortUsd": 380000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "LINK",
+        "name": "LINK/USD [LINK-USDC]",
+        "markPx": 22.84,
+        "longCarryApr": -0.092,
+        "shortCarryApr": 0.061,
+        "openInterestLongUsd": 2100000,
+        "openInterestShortUsd": 1300000,
+        "availableLongUsd": 1600000,
+        "availableShortUsd": 1400000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "PEPE",
+        "name": "PEPE/USD [PEPE-USDC]",
+        "markPx": 1.124e-05,
+        "longCarryApr": -0.244,
+        "shortCarryApr": 0.189,
+        "openInterestLongUsd": 1500000,
+        "openInterestShortUsd": 310000,
+        "availableLongUsd": 400000,
+        "availableShortUsd": 220000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "BTC",
+        "name": "BTC/USD [BTC-BTC]",
+        "markPx": 112480.2,
+        "longCarryApr": 0.082,
+        "shortCarryApr": -0.118,
+        "openInterestLongUsd": 9700000,
+        "openInterestShortUsd": 17400000,
+        "availableLongUsd": 12000000,
+        "availableShortUsd": 4200000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "AVAX",
+        "name": "AVAX/USD [WETH-USDC]",
+        "markPx": 31.08,
+        "longCarryApr": -0.044,
+        "shortCarryApr": 0.012,
+        "openInterestLongUsd": 800000,
+        "openInterestShortUsd": 650000,
+        "availableLongUsd": 900000,
+        "availableShortUsd": 950000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "NEAR",
+        "name": "NEAR/USD [WETH-USDC]",
+        "markPx": 3.12,
+        "longCarryApr": 0.018,
+        "shortCarryApr": -0.049,
+        "openInterestLongUsd": 300000,
+        "openInterestShortUsd": 560000,
+        "availableLongUsd": 700000,
+        "availableShortUsd": 240000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "gmx-v2",
+        "symbol": "XRP",
+        "name": "XRP/USD [WETH-USDC]",
+        "markPx": 2.71,
+        "longCarryApr": -0.106,
+        "shortCarryApr": 0.074,
+        "openInterestLongUsd": 2400000,
+        "openInterestShortUsd": 1100000,
+        "availableLongUsd": 600000,
+        "availableShortUsd": 900000,
+        "executable": true,
+        "source": "gmx-api"
+      },
+      {
+        "venue": "hyperliquid",
+        "symbol": "ETH",
+        "name": "ETH-PERP",
+        "markPx": 4219.1,
+        "longCarryApr": -0.041,
+        "shortCarryApr": 0.041,
+        "openInterestLongUsd": 1480000000,
+        "openInterestShortUsd": 1480000000,
+        "availableLongUsd": 50000000,
+        "availableShortUsd": 50000000,
+        "executable": false,
+        "source": "hyperliquid-api"
+      },
+      {
+        "venue": "hyperliquid",
+        "symbol": "SOL",
+        "name": "SOL-PERP",
+        "markPx": 211.4,
+        "longCarryApr": -0.087,
+        "shortCarryApr": 0.087,
+        "openInterestLongUsd": 612000000,
+        "openInterestShortUsd": 612000000,
+        "availableLongUsd": 30000000,
+        "availableShortUsd": 30000000,
+        "executable": false,
+        "source": "hyperliquid-api"
+      },
+      {
+        "venue": "hyperliquid",
+        "symbol": "BTC",
+        "name": "BTC-PERP",
+        "markPx": 112502,
+        "longCarryApr": -0.109,
+        "shortCarryApr": 0.109,
+        "openInterestLongUsd": 2910000000,
+        "openInterestShortUsd": 2910000000,
+        "availableLongUsd": 80000000,
+        "availableShortUsd": 80000000,
+        "executable": false,
+        "source": "hyperliquid-api"
+      },
+      {
+        "venue": "hyperliquid",
+        "symbol": "HYPE",
+        "name": "HYPE-PERP",
+        "markPx": 47.3,
+        "longCarryApr": 0.023,
+        "shortCarryApr": -0.023,
+        "openInterestLongUsd": 408000000,
+        "openInterestShortUsd": 408000000,
+        "availableLongUsd": 20000000,
+        "availableShortUsd": 20000000,
+        "executable": false,
+        "source": "hyperliquid-api"
+      }
+    ],
+    "fixed": [
+      {
+        "venue": "pendle",
+        "name": "PT-weETH-26DEC2026",
+        "market": "0x2c6ab44ad2a4fbd0a6d1c3a6e1ae3f2e2f5d1b77",
+        "pt": "0x1c27ad8a19ba026adabd615f6bc77158130cfbe4",
+        "underlying": "0x35751007a407ca6feffe80b3cb397736d2cf4dbe",
+        "impliedApr": 0.054,
+        "underlyingApr": 0.027,
+        "liquidityUsd": 41200000,
+        "expiry": "2026-12-26T00:00:00.000Z",
+        "daysToExpiry": 87
+      },
+      {
+        "venue": "pendle",
+        "name": "PT-wstETH-25JUN2027",
+        "market": "0x08a152834de126d2ef83d612ff36e4523fd0017f",
+        "pt": "0x9741cac1a22ff3615fa074fd0b439975a5e137e9",
+        "underlying": "0x5979d7b546e38e414f7e9822514be443a4800529",
+        "impliedApr": 0.0312,
+        "underlyingApr": 0.023,
+        "liquidityUsd": 18700000,
+        "expiry": "2027-06-25T00:00:00.000Z",
+        "daysToExpiry": 268
+      },
+      {
+        "venue": "pendle",
+        "name": "PT-sUSDe-27NOV2026",
+        "market": "0xb37e3cf7d1b5f1dd5f1a4f5f1e2b58c5c6e5f7d1",
+        "pt": "0x8d3f2e1a1bb87f0e1ce2e4b4a1a58a8b9c0d1e2f",
+        "underlying": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "impliedApr": 0.0864,
+        "underlyingApr": 0.061,
+        "liquidityUsd": 26300000,
+        "expiry": "2026-11-27T00:00:00.000Z",
+        "daysToExpiry": 58
+      },
+      {
+        "venue": "pendle",
+        "name": "PT-gUSDC-25DEC2026",
+        "market": "0x0bd6890b3bb15f16430546147734b254d0b03059",
+        "pt": "0x3a1e2b5a2b3c4d5e6f708192a3b4c5d6e7f80912",
+        "underlying": "0xd3443ee1e91af28e5fb858fbd0d72a63ba8046e0",
+        "impliedApr": 0.0721,
+        "underlyingApr": 0.0594,
+        "liquidityUsd": 6800000,
+        "expiry": "2026-12-25T00:00:00.000Z",
+        "daysToExpiry": 86
+      }
+    ]
+  }
+}

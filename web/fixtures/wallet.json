@@ -1,0 +1,78 @@
+{
+  "address": "0x7a16ff8270133f063aab6c9977183d9e72835428",
+  "asOf": "2026-09-30T11:42:31.000Z",
+  "netWorthUsd": 48215.37,
+  "currentCarryUsdPerYear": 612.4,
+  "currentCarryApr": 0.0127,
+  "aave": { "healthFactor": 2.41, "collateralUsd": 31800, "debtUsd": 10250, "eMode": 0 },
+  "positions": [
+    { "venue": "wallet", "kind": "balance", "symbol": "USDC", "amount": 12400, "usd": 12400, "apr": 0, "detail": { "idle": true } },
+    { "venue": "wallet", "kind": "balance", "symbol": "ETH", "amount": 0.62, "usd": 2615.5, "apr": 0 },
+    { "venue": "wallet", "kind": "balance", "symbol": "ARB", "amount": 3500, "usd": 1687.35, "apr": 0 },
+    { "venue": "aave-v3", "kind": "supply", "symbol": "wstETH", "amount": 6.3, "usd": 31800, "apr": 0.0231, "detail": { "collateral": true } },
+    { "venue": "aave-v3", "kind": "borrow", "symbol": "USDC", "amount": 10250, "usd": -10250, "apr": -0.039 },
+    { "venue": "gmx-v2", "kind": "perp", "symbol": "ETH", "amount": -0.5, "usd": 9962.52, "apr": 0.021, "detail": { "side": "short", "market": "ETH/USD [WETH-USDC]", "leverage": 2.1 } }
+  ],
+  "opportunities": [
+    {
+      "id": "wallet:idle:USDC",
+      "strategy": "wallet",
+      "scope": "wallet",
+      "title": "Idle USDC: supply to Compound v3 at 3.48%",
+      "thesis": "12,400 USDC is sitting in the wallet earning nothing. Compound v3 USDC pays the highest executable base supply rate right now.",
+      "legs": [{ "action": "supply", "venue": "compound-v3", "symbol": "USDC", "weight": 1, "apr": 0.0348 }],
+      "grossApr": 0.0348, "costApr": 0.0004, "netApr": 0.0344, "leverage": 1, "capacityUsd": 8500000,
+      "risk": { "score": 8, "grade": "A", "factors": ["Smart-contract risk only"] },
+      "executable": true, "params": { "amount": 12400 },
+      "walletImpact": { "amountUsd": 12400, "usdPerYear": 426.56 }
+    },
+    {
+      "id": "wallet:refinance:USDC->USDT",
+      "strategy": "wallet",
+      "scope": "wallet",
+      "title": "Refinance Aave USDC debt into USDT (3.9% → 2.4%)",
+      "thesis": "Your USDC borrow costs 3.9%. Borrowing USDT on the same collateral at 2.4% and repaying USDC saves 1.5%/yr on the debt.",
+      "legs": [
+        { "action": "borrow", "venue": "aave-v3", "symbol": "USDT", "weight": 1, "apr": -0.024 },
+        { "action": "swap", "venue": "uniswap-v3", "symbol": "USDT→USDC", "weight": 1, "apr": 0 },
+        { "action": "repay", "venue": "aave-v3", "symbol": "USDC", "weight": 1, "apr": 0.039 }
+      ],
+      "grossApr": 0.015, "costApr": 0.0011, "netApr": 0.0139, "leverage": 1, "capacityUsd": 15000000,
+      "risk": { "score": 14, "grade": "A", "healthFactor": 2.41, "factors": ["USDT/USDC depeg changes debt value"] },
+      "executable": true, "params": { "debtUsd": 10250 },
+      "walletImpact": { "amountUsd": 10250, "usdPerYear": 142.48 }
+    },
+    {
+      "id": "wallet:unhedged:ARB",
+      "strategy": "wallet",
+      "scope": "wallet",
+      "title": "Hedge idle ARB with a GMX short and collect 14.7%",
+      "thesis": "You hold 3,500 ARB unhedged. Shorting the same notional on GMX neutralizes price exposure and earns the short-side funding.",
+      "legs": [
+        { "action": "hold", "venue": "wallet", "symbol": "ARB", "weight": 1, "apr": 0 },
+        { "action": "short-perp", "venue": "gmx-v2", "symbol": "ARB", "weight": 1, "apr": 0.147 }
+      ],
+      "grossApr": 0.147, "costApr": 0.012, "netApr": 0.135, "leverage": 1, "capacityUsd": 940000,
+      "risk": { "score": 40, "grade": "B", "liquidationMovePct": 0.85, "factors": ["Funding can flip", "Needs USDC collateral for the short"] },
+      "executable": true, "params": { "amountArb": 3500 },
+      "walletImpact": { "amountUsd": 1687.35, "usdPerYear": 227.79 }
+    },
+    {
+      "id": "wallet:health:loop-wstETH",
+      "strategy": "wallet",
+      "scope": "wallet",
+      "title": "Health factor 2.41 has room: switch to ETH e-mode",
+      "thesis": "Moving the USDC debt to WETH and entering ETH e-mode raises max LTV to 93% and turns the position into a wstETH loop at the staking spread.",
+      "legs": [
+        { "action": "borrow", "venue": "aave-v3", "symbol": "WETH", "weight": 1, "apr": -0.0198 },
+        { "action": "repay", "venue": "aave-v3", "symbol": "USDC", "weight": 1, "apr": 0.039 }
+      ],
+      "grossApr": 0.0192, "costApr": 0.0024, "netApr": 0.0168, "leverage": 1, "capacityUsd": 94000000,
+      "risk": { "score": 33, "grade": "B", "healthFactor": 1.9, "factors": ["Debt becomes ETH-denominated", "Swap slippage"] },
+      "executable": false, "whyNotExecutable": "E-mode switch with open debt needs a flash-loan builder (not implemented).",
+      "params": { "eMode": 1 },
+      "walletImpact": { "amountUsd": 10250, "usdPerYear": 172.2 }
+    }
+  ],
+  "potentialCarryUsdPerYear": 1581.43
+}
