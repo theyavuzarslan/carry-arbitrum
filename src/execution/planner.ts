@@ -163,7 +163,10 @@ export const planActions = (opp: Opportunity, capitalUsd: number, snap: MarketSn
         coll += b;
       }
       a.push(...supplyTo(venue, L, { all: L }, comet));
-      notes.push(`${lev}x ${lst} loop in ${a.filter((x) => x.t === "aave.borrow" || x.t === "comet.withdraw").length} rounds; the CarryAccount contract does the same in one flash-loan transaction.`);
+      const rounds = a.filter((x) => x.t === "aave.borrow" || x.t === "comet.withdraw").length;
+      notes.push(venue === "aave-v3"
+        ? `${lev}x ${lst} loop: ${rounds} supply/borrow/swap rounds as plain transactions, or ONE CarryAccount.openLoop flash-loan transaction (used automatically in fork/live mode when contracts/out exists).`
+        : `${lev}x ${lst} loop on Compound: ${rounds} supply/borrow/swap rounds (capped at 15; leverage converges just under target).`);
       break;
     }
     case "wallet": {

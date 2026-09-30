@@ -19,8 +19,12 @@ export interface BotPosition {
   accruedUsd: number;
   status: "open" | "closed" | "unwinding";
   weakScans: number;
+  exposure?: string;
   txs: string[];
 }
+
+/** What a trade's carry depends on: two trades on the same GMX market or yield source are one bet. */
+const exposureOf = (o: Opportunity): string => String(o.params.perpMarket ?? o.params.target ?? `${o.params.collateral}/${o.params.debt ?? o.params.funding}`);
 
 export interface BotState {
   mode: "off" | "dry-run" | "fork" | "live";
@@ -143,14 +147,14 @@ export const runBot = async (cfg: BotConfig, log: (s: string) => void = console.
       const used = open.reduce((s, p) => s + p.capitalUsd, 0);
       const free = cfg.budgetUsd - used;
       const candidates: Opportunity[] = all
-        .filter((o) => o.executable && o.scope === "market" && o.netApr >= cfg.minNetApr && o.risk.score <= cfg.maxRisk && o.capacityUsd >= cfg.ticketUsd * 3 && !open.some((p) => p.opportunityId === o.id))
+        .filter((o) => o.executable && o.scope === "market" && o.netApr >= cfg.minNetApr && o.risk.score <= cfg.maxRisk && o.capacityUsd >= cfg.ticketUsd * 3 && !open.some((p) => p.opportunityId === o.id || p.exposure === exposureOf(o)))
         .sort((a, b) => riskAdjusted(b) - riskAdjusted(a));
       const best = candidates[0];
       if (!best) note("info", `scan ${i}: ${all.filter((o) => o.netApr > 0).length} positive-carry ideas, none pass the gate (net ≥ ${(cfg.minNetApr * 100).toFixed(1)}%, risk ≤ ${cfg.maxRisk}, capacity ≥ 3x ticket)`);
       else if (free < cfg.ticketUsd || open.length >= cfg.maxPositions) note("info", `scan ${i}: best is ${best.title} at ${(best.netApr * 100).toFixed(2)}% but budget is fully deployed`);
       else {
         note("action", `ENTER ${best.title}: net ${(best.netApr * 100).toFixed(2)}%, risk ${best.risk.grade}/${best.risk.score}, $${cfg.ticketUsd}`);
-        const pos: BotPosition = { opportunityId: best.id, strategy: best.strategy, title: best.title, openedAt: new Date().toISOString(), capitalUsd: cfg.ticketUsd, entryNetApr: best.netApr, currentNetApr: best.netApr, accruedUsd: 0, status: "open", weakScans: 0, txs: [] };
+        const pos: BotPosition = { opportunityId: best.id, strategy: best.strategy, title: best.title, openedAt: new Date().toISOString(), capitalUsd: cfg.ticketUsd, entryNetApr: best.netApr, currentNetApr: best.netApr, accruedUsd: 0, status: "open", weakScans: 0, exposure: exposureOf(best), txs: [] };
         try {
           const res = await execute(best, snap, { mode: cfg.mode === "dry-run" ? "plan" : cfg.mode, capitalUsd: cfg.ticketUsd, account, fork, privateKey: pk, confirm: cfg.mode === "live", log: (s) => note("info", s) });
           pos.txs = res.txs.length ? res.txs.map((t) => t.hash) : res.plan.steps.map((s) => `planned: ${s.label}`);

@@ -2,8 +2,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createWalletClient, formatUnits, http, parseEther, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrum } from "viem/chains";
-import { aaveDataProviderAbi, aavePoolAbi, erc20Abi } from "../abis.ts";
-import { AAVE, RPC_URLS, TOKENS } from "../config.ts";
+import { aaveDataProviderAbi, aavePoolAbi, cometAbi, erc20Abi } from "../abis.ts";
+import { AAVE, COMPOUND, RPC_URLS, TOKENS } from "../config.ts";
 import { clientFor, getClient } from "../rpc.ts";
 import type { Address, ExecutionPlan, Hex, MarketSnapshot, Opportunity, TxStep } from "../types.ts";
 import { chainBalances, compile, describe, ledgerBalances, type Action } from "./actions.ts";
@@ -133,6 +133,7 @@ export interface AccountState {
   usdc: string; weth: string; eth: string;
   aave: { collateralUsd: number; debtUsd: number; healthFactor: number; supplied: Record<string, string>; borrowed: Record<string, string> };
   gmxPendingOrders: Hex[];
+  compound: Record<string, { supplied: string; borrowed: string; collateral: Record<string, string> }>;
   tokens: Record<string, string>;
 }
 
@@ -163,7 +164,22 @@ export const readAccountState = async (client: PublicClient, account: Address): 
     if (u[0] > 0n) supplied[sy] = formatUnits(u[0], d);
     if (u[2] > 0n) borrowed[sy] = formatUnits(u[2], d);
   }));
+  const compound: AccountState["compound"] = {};
+  await Promise.all(Object.entries(COMPOUND).map(async ([name, { comet, base }]) => {
+    const [sup, bor] = await Promise.all([
+      client.readContract({ address: comet, abi: cometAbi, functionName: "balanceOf", args: [account] }),
+      client.readContract({ address: comet, abi: cometAbi, functionName: "borrowBalanceOf", args: [account] }),
+    ]);
+    const collateral: Record<string, string> = {};
+    for (const [sym, a] of Object.entries(TOKENS)) {
+      const c = await client.readContract({ address: comet, abi: cometAbi, functionName: "collateralBalanceOf", args: [account, a] }).catch(() => 0n);
+      if (c > 0n) collateral[sym] = formatUnits(c, sym === "USDC" || sym === "USDT" ? 6 : sym === "WBTC" ? 8 : 18);
+    }
+    const dec = base === "WETH" ? 18 : 6;
+    if (sup > 0n || bor > 0n || Object.keys(collateral).length) compound[name] = { supplied: formatUnits(sup, dec), borrowed: formatUnits(bor, dec), collateral };
+  }));
   return {
+    compound,
     usdc: tokens.USDC ?? "0", weth: tokens.WETH ?? "0", eth: formatUnits(eth, 18),
     aave: { collateralUsd: Number(acct[0]) / 1e8, debtUsd: Number(acct[1]) / 1e8, healthFactor: acct[1] === 0n ? Infinity : Number(acct[5]) / 1e18, supplied, borrowed },
     gmxPendingOrders: orders,

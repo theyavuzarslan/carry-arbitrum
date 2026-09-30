@@ -80,8 +80,12 @@ GMX orders are two-step: the transaction creates an order, and a GMX keeper fill
 
 **Proven on a fork of Arbitrum One** (logs in [docs/evidence](docs/evidence)):
 
-- ARB cash-and-carry, $10,000: USDC → ARB via Uniswap, ARB supplied to Aave, $6,667 GMX short with $3,529 USDC margin. 6 transactions, all succeeded, and the GMX order key is pending in the DataStore.
-- See [docs/evidence](docs/evidence) for the LST-loop and reverse-basis runs.
+| Trade | Capital | Transactions | Result on the fork |
+| --- | --- | --- | --- |
+| ARB cash-and-carry | $10,000 | 6 | $6,667 ARB supplied to Aave; $6,667 GMX short with $3,529 USDC margin; GMX order key pending in the DataStore |
+| Reverse basis (ETH) | $10,000 | 9 | 2.68 WETH borrowed on Aave and sold; $4,815 GMX long plus 0.893 WETH margin; delta-neutral; Aave HF 1.62 (target 1.60) |
+| 5x wstETH loop via CarryAccount | $8,000 | 5 (swap, deploy, approve, openLoop) | $39,974 collateral, $32,004 debt, **5.02x, HF 1.199** (the scanner predicted 1.20) in one flash-loan transaction |
+| 5x wstETH loop on Compound, iterative | $8,000 | 15 rounds (79 lines incl. approvals) | 11.18 wstETH collateral, 10.96 WETH debt, **4.67x** — why the flash-loan contract exists |
 
 ## The CarryAccount contract
 

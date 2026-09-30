@@ -1,27 +1,104 @@
 {
-  "mode": "dry-run",
-  "running": true,
-  "lastScanAt": "2026-09-30T11:42:08.000Z",
-  "positions": [
-    { "opportunityId": "basis:gmx-v2:SOL/USD:short", "strategy": "basis", "title": "SOL cash-and-carry: hold SOL, short GMX SOL/USD", "openedAt": "2026-09-29T08:15:00.000Z", "capitalUsd": 5000, "entryNetApr": 0.0812, "currentNetApr": 0.0718, "status": "open", "txs": ["0x9f3c1b2d6a4e8f70112233445566778899aabbccddeeff00112233445566aa01", "0x9f3c1b2d6a4e8f70112233445566778899aabbccddeeff00112233445566aa02"] },
-    { "opportunityId": "lst-loop:aave-v3:wstETH/WETH:emode1", "strategy": "lst-loop", "title": "wstETH loop on Aave v3 (ETH e-mode, 4.2x)", "openedAt": "2026-09-27T21:02:00.000Z", "capitalUsd": 10000, "entryNetApr": 0.0288, "currentNetApr": 0.0316, "status": "open", "txs": [] },
-    { "opportunityId": "basis:gmx-v2:ARB/USD:short", "strategy": "basis", "title": "ARB cash-and-carry: hold ARB, short GMX ARB/USD", "openedAt": "2026-09-25T13:40:00.000Z", "capitalUsd": 2500, "entryNetApr": 0.052, "currentNetApr": -0.011, "status": "closed", "txs": [] }
-  ],
-  "log": [
-    { "at": "2026-09-30T10:12:04.000Z", "level": "info", "msg": "scan #412 started: 14 lending markets, 22 perp markets" },
-    { "at": "2026-09-30T10:12:11.000Z", "level": "warn", "msg": "hyperliquid-api timeout after 8000ms, using cached funding" },
-    { "at": "2026-09-30T10:12:12.000Z", "level": "info", "msg": "9 opportunities, 6 executable, best net 9.14% (funding-spread ETH)" },
-    { "at": "2026-09-30T10:27:03.000Z", "level": "info", "msg": "scan #413 started" },
-    { "at": "2026-09-30T10:27:09.000Z", "level": "info", "msg": "SOL short carry 15.6% (entry 16.9%), holding" },
-    { "at": "2026-09-30T10:42:02.000Z", "level": "info", "msg": "scan #414 started" },
-    { "at": "2026-09-30T10:42:08.000Z", "level": "action", "msg": "[dry-run] would rebalance wstETH loop: HF 1.16 < target 1.18, repay 0.42 WETH" },
-    { "at": "2026-09-30T10:57:05.000Z", "level": "info", "msg": "scan #415 started" },
-    { "at": "2026-09-30T10:57:12.000Z", "level": "warn", "msg": "ARB short funding dropped to 3.1%, below exit threshold 4.0%" },
-    { "at": "2026-09-30T10:57:12.000Z", "level": "action", "msg": "[dry-run] would close ARB basis: close-perp ARB 1,250 USD, swap ARB→USDC" },
-    { "at": "2026-09-30T11:12:01.000Z", "level": "info", "msg": "scan #416 started" },
-    { "at": "2026-09-30T11:12:07.000Z", "level": "info", "msg": "ARB short funding back to 14.7% (position already closed)" },
-    { "at": "2026-09-30T11:27:02.000Z", "level": "info", "msg": "scan #417 started" },
-    { "at": "2026-09-30T11:42:01.000Z", "level": "info", "msg": "scan #418 started" },
-    { "at": "2026-09-30T11:42:08.000Z", "level": "info", "msg": "9 opportunities, 6 executable; no action (all open positions within bands)" }
-  ]
+ "mode": "dry-run",
+ "running": false,
+ "budgetUsd": 15000,
+ "positions": [
+  {
+   "opportunityId": "reverse-basis:ethusdeth-eth:aave-v3",
+   "strategy": "reverse-basis",
+   "title": "Borrow WETH on aave-v3, sell, long ETH/USD [ETH-ETH]",
+   "openedAt": "2026-09-30T12:02:30.479Z",
+   "capitalUsd": 5000,
+   "entryNetApr": 0.09682787652903344,
+   "currentNetApr": 0.09682805816977375,
+   "accruedUsd": 0.0010258044804106596,
+   "status": "open",
+   "weakScans": 0,
+   "exposure": "0x450bb6774Dd8a756274E0ab4107953259d2ac541",
+   "txs": [
+    "planned: approve USDC for Aave (exact amount)",
+    "planned: supply 5000000000 USDC to Aave",
+    "planned: borrow 1338860521024000000 WETH from Aave",
+    "planned: approve WETH for Uniswap (exact amount)",
+    "planned: swap 892618309366700800 WETH → ≥2392995425 USDC via WETH/USDC fees 500",
+    "planned: approve USDC for Aave (exact amount)",
+    "planned: supply 2405034528 USDC to Aave",
+    "planned: approve WETH for GMX Router (exact amount)",
+    "planned: GMX increase LONG $2407 with 446242211657299200 WETH collateral"
+   ]
+  },
+  {
+   "opportunityId": "lend-borrow:usdt:aave-v3:0:usdc:aave-v3:gho",
+   "strategy": "lend-borrow",
+   "title": "Borrow USDC at 3.89% on aave-v3, earn 8.46% in GHO (aave-v3)",
+   "openedAt": "2026-09-30T12:02:52.866Z",
+   "capitalUsd": 5000,
+   "entryNetApr": 0.06294674411727244,
+   "currentNetApr": 0.06294674411727244,
+   "accruedUsd": 0.0004434376164730228,
+   "status": "open",
+   "weakScans": 0,
+   "exposure": "GHO",
+   "txs": [
+    "planned: approve USDC for Uniswap (exact amount)",
+    "planned: swap 5000000000 USDC → ≥4976661790 USDT via USDC/USDT fees 100",
+    "planned: approve USDT for Aave (exact amount)",
+    "planned: supply 5001670141 USDT to Aave",
+    "planned: borrow 2437463773 USDC from Aave",
+    "planned: approve USDC for Uniswap (exact amount)",
+    "planned: swap 2437389462 USDC → ≥2423476223765640851812 0x7dfF72 via USDC/0x7dfF72 fees 500",
+    "planned: approve 0x7dfF72 for Aave (exact amount)",
+    "planned: supply 2435654496246875227952 0x7dfF72 to Aave"
+   ]
+  },
+  {
+   "opportunityId": "basis:arbusdarb-usdc:arb:funded",
+   "strategy": "basis",
+   "title": "Long ARB / short ARB/USD [ARB-USDC] on GMX",
+   "openedAt": "2026-09-30T12:03:16.562Z",
+   "capitalUsd": 5000,
+   "entryNetApr": 0.0567596024658688,
+   "currentNetApr": 0.0568256127351583,
+   "accruedUsd": 0.00018682393227997248,
+   "status": "open",
+   "weakScans": 0,
+   "exposure": "0xC25cEf6061Cf5dE5eb761b50E4743c1F5D7E5407",
+   "txs": [
+    "planned: approve USDC for Uniswap (exact amount)",
+    "planned: swap 3333333333 USDC → ≥16219422527758452307121 ARB via USDC/WETH/ARB fees 500/500",
+    "planned: approve ARB for Aave (exact amount)",
+    "planned: supply 16300927163576333977007 ARB to Aave",
+    "planned: approve USDC for GMX Router (exact amount)",
+    "planned: GMX increase SHORT $3333 with 1666557635 USDC collateral"
+   ]
+  }
+ ],
+ "log": [
+  {
+   "at": "2026-09-30T12:02:30.478Z",
+   "level": "warn",
+   "msg": "sources down: hyperliquid: The operation was aborted due to timeout"
+  },
+  {
+   "at": "2026-09-30T12:02:30.479Z",
+   "level": "action",
+   "msg": "ENTER Borrow WETH on aave-v3, sell, long ETH/USD [ETH-ETH]: net 9.68%, risk A/17, $5000"
+  },
+  {
+   "at": "2026-09-30T12:02:52.866Z",
+   "level": "action",
+   "msg": "ENTER Borrow USDC at 3.89% on aave-v3, earn 8.46% in GHO (aave-v3): net 6.29%, risk B/25, $5000"
+  },
+  {
+   "at": "2026-09-30T12:03:16.562Z",
+   "level": "action",
+   "msg": "ENTER Long ARB / short ARB/USD [ARB-USDC] on GMX: net 5.68%, risk A/14, $5000"
+  },
+  {
+   "at": "2026-09-30T12:03:37.298Z",
+   "level": "info",
+   "msg": "scan 4: best is FX carry: fund in WBTC (0.76%), invest in USDT (4.34%) at 5.34% but budget is fully deployed"
+  }
+ ],
+ "lastScanAt": "2026-09-30T12:03:37.262Z"
 }
