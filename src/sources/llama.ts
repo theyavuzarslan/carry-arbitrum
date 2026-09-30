@@ -9,7 +9,8 @@ interface LendBorrow { pool: string; apyBaseBorrow: number | null; apyRewardBorr
 /** Lending venues we read on-chain ourselves; DefiLlama rows for them are dropped to avoid doubles. */
 const ONCHAIN = new Set(["aave-v3", "compound-v3"]);
 /** Lending-style projects worth scanning market-wide on Arbitrum. */
-const LENDING = new Set(["fluid-lending", "dolomite", "morpho-blue", "morpho-v1", "silo-v2", "silo-v1", "radiant-v2", "euler-v2", "lodestar-v1", "spark-savings", "sky-lending", "usd-ai"]);
+// Issuer savings pools (sky, spark, usd-ai) are covered by readHoldYields, so they are not listed here.
+const LENDING = new Set(["fluid-lending", "dolomite", "morpho-blue", "morpho-v1", "silo-v2", "silo-v1", "radiant-v2", "euler-v2", "lodestar-v1"]);
 
 /**
  * Market-wide lending on Arbitrum from DefiLlama. These venues are scanned so the bot can say
