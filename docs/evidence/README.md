@@ -10,3 +10,5 @@ Each log is the raw output of `node src/cli.ts execute <id> --mode fork --capita
 | fork-lst-loop-compound-iterative.log | 5x wstETH loop on Compound cWETHv3 as 15 plain rounds, $8k |
 
 GMX orders remain pending on a fork: keepers, which fill orders at signed oracle prices, do not run there. The order key is read back from the GMX DataStore (`ACCOUNT_ORDER_LIST`) as proof the order exists. The first ARB run failed with `InsufficientExecutionFee(4177115511238881, 600000000000000)`; the executor now sizes the fee from the gas price (docs/VERIFICATION.md).
+
+**Known gap in fork-reverse-basis.log.** The GMX increase-long transaction succeeded (receipt status success, gas 898,720), but the post-trade read shows `gmxPendingOrders: []`. The ARB run read its order key back correctly. The read ran while other processes were hitting the same public RPC, and at the time the reader turned any RPC error into an empty list. It now reports `read failed: <reason>` instead, so an empty list means no orders. The run was not repeated.

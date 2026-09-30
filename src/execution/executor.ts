@@ -132,7 +132,7 @@ const useContract = (opp: Opportunity) =>
 export interface AccountState {
   usdc: string; weth: string; eth: string;
   aave: { collateralUsd: number; debtUsd: number; healthFactor: number; supplied: Record<string, string>; borrowed: Record<string, string> };
-  gmxPendingOrders: Hex[];
+  gmxPendingOrders: Hex[] | string;
   compound: Record<string, { supplied: string; borrowed: string; collateral: Record<string, string> }>;
   tokens: Record<string, string>;
 }
@@ -140,7 +140,7 @@ export interface AccountState {
 export const readAccountState = async (client: PublicClient, account: Address): Promise<AccountState> => {
   const [acct, orders, eth] = await Promise.all([
     client.readContract({ address: AAVE.POOL, abi: aavePoolAbi, functionName: "getUserAccountData", args: [account] }),
-    pendingOrders(client, account).catch(() => [] as Hex[]),
+    pendingOrders(client, account).catch((e: Error) => `read failed: ${e.message.split("\n")[0]}`),
     client.getBalance({ address: account }),
   ]);
   const tokens: Record<string, string> = {};

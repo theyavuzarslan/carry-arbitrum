@@ -104,7 +104,7 @@ State and a log are kept in `.state/bot.json`, and the dashboard reads it.
 
 ## Dashboard
 
-`node src/cli.ts serve`, then open http://localhost:8787 for the opportunity board with filters, a detail panel and a plan builder, plus market tables with a carry curve, a wallet view and the bot log. `web/index.html?demo=1` works with no backend from recorded fixtures.
+`node src/cli.ts serve`, then open http://localhost:8787 for the opportunity board with filters, a detail panel and a plan builder, plus market tables with a carry curve, a wallet view and the bot log. `web/index.html?demo=1` works with no backend from recorded fixtures. The wallet fixture and the examples use `0xAFfD…6500`, a public Arbitrum address picked from recent Aave borrow events; it is not ours and has no connection to this project.
 
 ## Setup
 

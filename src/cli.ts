@@ -115,6 +115,18 @@ const main = async () => {
       if (values["min-net"]) cfg.minNetApr = Number(values["min-net"]);
       return runBot(cfg);
     }
+    case "demo": {
+      // Two-minute tour on live data: executable market carry, then a real wallet.
+      const snap = await getSnapshot(snapOpts());
+      console.log(`== Executable carry on Arbitrum right now (${snap.asOf})\n`);
+      table(scanMarket(snap, { executableOnly: true }).slice(0, 10));
+      const addr = (arg && isAddress(arg) ? arg : "0xAFfD35301381265Ed740098A2394894B3A2d6500") as Address;
+      const r = await walletReport(addr, snap);
+      console.log(`\n== Wallet ${addr}: net ${usd(r.netWorthUsd)}, carry ${usd(r.currentCarryUsdPerYear)}/yr, uplift +${usd(r.potentialCarryUsdPerYear)}/yr`);
+      for (const o of r.opportunities) console.log(`  ${o.params.action === "deleverage" ? "!!" : "+ "} ${o.title}  (${o.walletImpact ? `${usd(o.walletImpact.usdPerYear)}/yr` : ""})`);
+      console.log(`\nNext: node src/cli.ts execute <id> --mode fork   (ids: node src/cli.ts scan --exec --json)`);
+      return;
+    }
     case "serve":
       serve(values.port ? Number(values.port) : undefined);
       return new Promise(() => {});
@@ -128,7 +140,8 @@ const main = async () => {
   execute <rank|id> --mode fork        run it on an anvil fork of Arbitrum (needs Foundry)
   execute <rank|id> --mode live --yes  sign with CARRY_PRIVATE_KEY (capped by CARRY_MAX_CAPITAL_USD)
   run [--mode dry-run|fork|live] [--interval 300] [--budget 25000] [--ticket 10000] [--iterations N]
-  serve [--port 8787]                  dashboard + JSON API`);
+  serve [--port 8787]                  dashboard + JSON API
+  demo [0xaddress]                     top executable trades + a wallet report`);
   }
 };
 

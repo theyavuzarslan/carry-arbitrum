@@ -177,7 +177,8 @@ export const risk = {
   capacity: (usd: number) => ({ points: usd < 50_000 ? 20 : usd < 250_000 ? 10 : usd < 1_000_000 ? 4 : 0, why: `capacity ${Math.round(usd / 1000)}k USD` }),
   fundingRegime: (carry: number, reference: number[]) => {
     // Funding far above what other venues pay tends to mean-revert: the carry is less durable.
-    if (!reference.length) return { points: 8, why: "no cross-venue funding reference" };
+    // Missing data must never make a trade look safer than a large observed gap would.
+    if (!reference.length) return { points: 18, why: "no cross-venue funding reference (source down or not listed)" };
     const ref = reference.reduce((s, x) => s + x, 0) / reference.length;
     const gap = carry - ref;
     return { points: Math.round(Math.min(20, Math.max(0, gap * 60))), why: `funding ${(gap * 100).toFixed(1)}pp above CEX average (mean-reversion risk)` };

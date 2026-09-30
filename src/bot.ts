@@ -139,7 +139,7 @@ export const runBot = async (cfg: BotConfig, log: (s: string) => void = console.
       if (account && (fork || cfg.mode === "live")) {
         const st = await readAccountState(fork?.client ?? getClient(), account);
         if (st.aave.debtUsd > 0 && st.aave.healthFactor < DEFAULTS.minHealthFactor) note("action", `DELEVERAGE: Aave HF ${st.aave.healthFactor.toFixed(2)} < ${DEFAULTS.minHealthFactor}; repay debt to reach ${DEFAULTS.targetHealthFactor}`);
-        else if (st.aave.debtUsd > 0) note("info", `Aave HF ${st.aave.healthFactor.toFixed(2)}, debt $${st.aave.debtUsd.toFixed(0)}, GMX pending orders ${st.gmxPendingOrders.length}`);
+        else if (st.aave.debtUsd > 0) note("info", `Aave HF ${st.aave.healthFactor.toFixed(2)}, debt $${st.aave.debtUsd.toFixed(0)}, GMX pending orders ${typeof st.gmxPendingOrders === "string" ? st.gmxPendingOrders : st.gmxPendingOrders.length}`);
       }
 
       // 4. Entry.
@@ -159,7 +159,7 @@ export const runBot = async (cfg: BotConfig, log: (s: string) => void = console.
           const res = await execute(best, snap, { mode: cfg.mode === "dry-run" ? "plan" : cfg.mode, capitalUsd: cfg.ticketUsd, account, fork, privateKey: pk, confirm: cfg.mode === "live", log: (s) => note("info", s) });
           pos.txs = res.txs.length ? res.txs.map((t) => t.hash) : res.plan.steps.map((s) => `planned: ${s.label}`);
           state.positions.push(pos);
-          if (res.after) note("info", `after entry: Aave HF ${res.after.aave.healthFactor === Infinity ? "∞" : res.after.aave.healthFactor.toFixed(2)}, GMX pending orders ${res.after.gmxPendingOrders.length}`);
+          if (res.after) note("info", `after entry: Aave HF ${res.after.aave.healthFactor === Infinity ? "∞" : res.after.aave.healthFactor.toFixed(2)}, GMX pending orders ${typeof res.after.gmxPendingOrders === "string" ? res.after.gmxPendingOrders : res.after.gmxPendingOrders.length}`);
         } catch (e) {
           note("warn", `entry failed for ${best.id}: ${(e as Error).message}`);
         }

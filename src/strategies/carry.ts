@@ -90,6 +90,8 @@ export const carryOpportunities = (ctx: StrategyContext): Opportunity[] => {
               risk.capacity(capacity),
               risk.asset(Z.symbol.replace(/^PT-/, "")),
               fxMismatch ? { points: Math.round(fxMismatch * 45), why: `uncovered ${cF}/${cZ} exposure (~${Math.round(fxMismatch * 100)}% annual vol)` } : { points: 0, why: "" },
+              // Capital is assumed to start in USDC: volatile collateral makes the whole position directional.
+              fxVol("USD", cX) ? { points: Math.round(fxVol("USD", cX) * 45), why: `capital sits in ${X}: fully exposed to ${cX}/USD (~${Math.round(fxVol("USD", cX) * 100)}% annual vol)` } : { points: 0, why: "" },
               Z.executable ? { points: 0, why: "" } : risk.venue(Z.venue),
               { points: 4, why: "floating borrow rate can rise above the target yield" },
             ],
