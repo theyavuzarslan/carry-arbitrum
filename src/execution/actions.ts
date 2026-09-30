@@ -41,6 +41,9 @@ export const describe = (a: Action): string => {
   }
 };
 
+/** Keeper gas the GMX v2.2 contracts charge an increase order for (4,177,115 gwei at 1.0115 gwei). */
+export const GMX_ORDER_GAS = 4_200_000n;
+
 const symBy = new Map(Object.entries(TOKENS).map(([s, a]) => [a.toLowerCase(), s]));
 export const sym = (a: Address): string => symBy.get(a.toLowerCase()) ?? a.slice(0, 8);
 
@@ -136,7 +139,12 @@ export const compile = async (a: Action, ctx: { client: PublicClient; account: A
     case "gmx.order": {
       const coll = await resolve(a.collateralAmount, bal);
       bal.add(a.collateralToken, -coll);
-      const tx = buildGmxOrder({ account, market: a.market, collateralToken: a.collateralToken, collateralAmount: coll, sizeUsd: a.sizeUsd, isLong: a.isLong, markPx: a.markPx, indexDecimals: a.indexDecimals, slippageBps: a.slippageBps, decrease: a.decrease });
+      // GMX requires executionFee >= estimated keeper gas x tx.gasprice. Measured on a fork: an increase
+      // order needs ~4.13M gas-equivalents. Size from the live gas price with headroom; keepers refund excess.
+      const gasPrice = await client.getGasPrice();
+      const est = gasPrice * GMX_ORDER_GAS * 13n / 10n;
+      const executionFeeWei = est > GMX.EXECUTION_FEE_WEI ? est : GMX.EXECUTION_FEE_WEI;
+      const tx = buildGmxOrder({ executionFeeWei, account, market: a.market, collateralToken: a.collateralToken, collateralAmount: coll, sizeUsd: a.sizeUsd, isLong: a.isLong, markPx: a.markPx, indexDecimals: a.indexDecimals, slippageBps: a.slippageBps, decrease: a.decrease });
       const steps: TxStep[] = [];
       if (!a.decrease && coll > 0n) steps.push(approve(a.collateralToken, GMX.ROUTER, coll));
       steps.push({ label: `GMX ${a.decrease ? "decrease" : "increase"} ${a.isLong ? "LONG" : "SHORT"} $${Math.round(a.sizeUsd)} with ${coll} ${sym(a.collateralToken)} collateral`, to: tx.to, data: tx.data, value: tx.value, expect: "order created; a GMX keeper fills it at the next oracle price" });

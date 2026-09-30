@@ -8,7 +8,7 @@ import { buildPlan } from "./execution/executor.ts";
 import { toJson } from "./json.ts";
 import { walletReport } from "./portfolio/opportunities.ts";
 import { getSnapshot } from "./snapshot.ts";
-import { scanMarket } from "./strategies/index.ts";
+import { riskAdjusted, scanMarket } from "./strategies/index.ts";
 import type { Address } from "./types.ts";
 
 const WEB = fileURLToPath(new URL("../web/", import.meta.url));
@@ -28,7 +28,8 @@ const body = (req: IncomingMessage): Promise<string> => new Promise((ok, err) =>
 
 const scanPayload = async () => {
   const snap = await getSnapshot();
-  const opportunities = scanMarket(snap).sort((a, b) => b.netApr - a.netApr);
+  // Executable trades first, then by risk-adjusted carry: this is an onchain bot.
+  const opportunities = scanMarket(snap).sort((a, b) => Number(b.executable) - Number(a.executable) || riskAdjusted(b) - riskAdjusted(a));
   return {
     asOf: snap.asOf,
     opportunities,

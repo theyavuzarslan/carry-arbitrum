@@ -58,7 +58,7 @@ export const GMX = {
   EXCHANGE_ROUTER: "0x7dE39FF2e232A2203196788d37e234cF8F1b83f1",
   ORDER_VAULT: "0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5",
   ROUTER: "0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6",
-  /** 0.0006 ETH; a keeper refunds the unused part. */
+  /** Floor for the execution fee; the actual fee is sized from the live gas price. Keepers refund excess. */
   EXECUTION_FEE_WEI: 600_000_000_000_000n,
   /** Market-open and market-close fees are 4-6 bps of size; we assume the worse case. */
   POSITION_FEE_BPS: 6,
