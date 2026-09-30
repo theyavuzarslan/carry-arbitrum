@@ -82,6 +82,7 @@ export interface MarketSnapshot {
   holdYields: HoldYield[];
   fixed: FixedYieldMarket[];
   prices: Record<string, number>; // symbol -> USD
+  dexDepthUsd?: Record<string, number>; // "A/B" -> USD tradable within 1% price impact on Uniswap v3
   errors: string[];               // sources that failed; the scan continues without them
 }
 

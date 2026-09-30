@@ -27,8 +27,8 @@ export const holdApr = (snap: MarketSnapshot, symbol: string): number =>
 /** Best place to supply a token. Executable venues only unless told otherwise. */
 export const bestSupply = (snap: MarketSnapshot, symbol: string, executableOnly = true): LendingMarket | undefined =>
   snap.lending
-    .filter((m) => m.symbol === symbol && (!executableOnly || m.executable) && m.supplyApr >= 0)
-    // Compound collateral rows earn nothing and are listed per-comet; prefer real supply markets.
+    // Compound collateral slots earn nothing, so they are not supply markets.
+    .filter((m) => m.symbol === symbol && (!executableOnly || m.executable) && m.supplyApr > 0 && (m.venue !== "compound-v3" || m.canBorrow))
     .sort((a, b) => b.supplyApr - a.supplyApr || b.totalSupplyUsd - a.totalSupplyUsd)[0];
 
 /** A way to borrow `debt` against `collateral` on one venue. */
@@ -131,6 +131,18 @@ export const assemble = (
   const costFraction = roundTripCost(a.legs) + gasUsd / ctx.referenceCapitalUsd;
   const costApr = costFraction * (365 / ctx.horizonDays);
   const leverage = a.legs.filter((l) => ["supply", "hold", "short-perp", "long-perp", "buy-pt"].includes(l.action)).reduce((s, l) => Math.max(s, l.weight), 0);
+  // Swap legs cap capacity: a hedge you cannot put on within 1% impact is not capacity.
+  let capacity = a.capacityUsd;
+  const depth = ctx.snap.dexDepthUsd ?? {};
+  for (const l of a.legs) {
+    if (l.action !== "swap" || l.venue !== "uniswap-v3") continue;
+    const [x = "", y = ""] = l.symbol.split("→");
+    const k = [x, y].sort().join("/");
+    let d = depth[k];
+    // USDC→LST routes go through WETH: the thinner hop binds.
+    if (d === undefined && x === "USDC" && depth[[y, "WETH"].sort().join("/")] !== undefined) d = Math.min(depth["USDC/WETH"] ?? Infinity, depth[[y, "WETH"].sort().join("/")]!);
+    if (d !== undefined) capacity = Math.min(capacity, d / Math.max(l.weight, 1e-9));
+  }
   const score = Math.max(0, Math.min(100, a.riskFactors.reduce((s, f) => s + f.points, 0)));
   return {
     id: a.id,
@@ -143,7 +155,7 @@ export const assemble = (
     costApr,
     netApr: gross - costApr,
     leverage,
-    capacityUsd: Math.max(0, a.capacityUsd),
+    capacityUsd: Math.max(0, capacity),
     risk: {
       score: Math.round(score),
       grade: gradeOf(score),
@@ -180,7 +192,7 @@ export const risk = {
   },
   /** Very high funding on GMX comes from near-empty pools and resets within hours. */
   extremeFunding: (carry: number) => ({ points: carry > 1 ? 35 : carry > 0.5 ? 20 : carry > 0.3 ? 10 : 0, why: `${Math.round(carry * 100)}%/yr funding is unlikely to persist` }),
-  offchainLeg: () => ({ points: 10, why: "one leg sits off Arbitrum (CEX or Hyperliquid)" }),
+  offchainLeg: () => ({ points: 30, why: "one leg sits off Arbitrum (CEX or Hyperliquid)" }),
   venue: (venue: string) => ({ points: ["aave-v3", "compound-v3", "gmx-v2", "uniswap-v3"].includes(venue) ? 0 : 6, why: `${venue} not integrated for execution` }),
 };
 

@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { PublicClient } from "viem";
 import { getClient } from "./rpc.ts";
 import { readAaveMarkets } from "./sources/aave.ts";
+import { readDexDepth } from "./sources/dexdepth.ts";
 import { fixCometEthPrices, readCompoundMarkets } from "./sources/compound.ts";
 import { readGmx } from "./sources/gmx.ts";
 import { readFundingReference } from "./sources/hyperliquid.ts";
@@ -45,6 +46,7 @@ export const takeSnapshot = async (client: PublicClient = getClient()): Promise<
   prices.ETH ??= prices.WETH!;
   prices.WBTC ??= prices.BTC!;
   if (prices.ETH) fixCometEthPrices(compound, prices.ETH);
+  const dexDepthUsd = await settle("uniswap-depth", readDexDepth(client, prices), errors, {});
 
   return {
     asOf: new Date().toISOString(),
@@ -53,6 +55,7 @@ export const takeSnapshot = async (client: PublicClient = getClient()): Promise<
     holdYields: holds,
     fixed: pendle,
     prices,
+    dexDepthUsd,
     errors,
   };
 };

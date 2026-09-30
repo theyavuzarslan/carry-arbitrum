@@ -64,10 +64,18 @@ export const cometAbi = parseAbi([
 
 export const uniswapQuoterAbi = parseAbi([
   "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
+  "function quoteExactInput(bytes path, uint256 amountIn) returns (uint256 amountOut,uint160[] sqrtPriceX96AfterList,uint32[] initializedTicksCrossedList,uint256 gasEstimate)",
 ]);
 
 export const uniswapRouterAbi = parseAbi([
   "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
+  "function exactInput((bytes path,address recipient,uint256 amountIn,uint256 amountOutMinimum) params) payable returns (uint256 amountOut)",
+]);
+
+export const gmxDataStoreAbi = parseAbi([
+  "function getBytes32Count(bytes32 setKey) view returns (uint256)",
+  "function getBytes32ValuesAt(bytes32 setKey, uint256 start, uint256 end) view returns (bytes32[])",
+  "function getUint(bytes32 key) view returns (uint256)",
 ]);
 
 export const uniswapFactoryAbi = parseAbi([
