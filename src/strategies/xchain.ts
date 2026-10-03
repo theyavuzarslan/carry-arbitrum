@@ -7,6 +7,7 @@ const MIN_XCHAIN_PERP_OI = Number(process.env.CARRY_MIN_XCHAIN_PERP_OI ?? 10_000
 
 const bridgeRisk = (q: BridgeQuote | undefined, chain: string) => [
   q ? { points: 6, why: `bridge via ${q.tool} (~${q.durationSec}s); exiting means bridging back` } : { points: 15, why: "no live bridge route" },
+  q?.stale ? { points: 5, why: `bridge quote is stale (from ${q.asOf.slice(11, 16)} UTC; LI.FI unreachable)` } : { points: 0, why: "" },
   { points: 4, why: `assets sit on ${chain}, an Arbitrum Orbit chain with its own sequencer` },
 ];
 

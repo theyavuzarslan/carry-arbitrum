@@ -49,6 +49,8 @@ export interface BridgeQuote {
   asOf: string;
   /** Measured depth: largest tested size (USD) whose one-way cost stayed under 1.5%. */
   depthUsd?: number;
+  /** Set when LI.FI could not be reached and this is the last good quote (≤24h old). */
+  stale?: boolean;
 }
 
 export interface EcoSnapshot {
@@ -155,7 +157,7 @@ export const quoteBridges = async (targets: { chainId: number; token: Address }[
     if (c && Date.now() - Date.parse(c.asOf) < QUOTE_TTL_MS) { out[key] = { ...c, costFraction: Math.max(0.0005, c.costFraction) }; return; }
     let base: BridgeQuote | undefined;
     let depth = 0;
-    for (const usd of [10_000, 1_000, 50_000]) {
+    for (const usd of [10_000, 50_000]) {
       try {
         const q = await lifiQuote({ toChainId: t.chainId, fromToken: TOKENS.USDC, toToken: t.token, fromAmount: BigInt(usd) * 1_000_000n, fromAddress: PROBE_ADDR });
         const inUsd = Number(q.estimate.fromAmountUSD ?? usd);
@@ -170,10 +172,13 @@ export const quoteBridges = async (targets: { chainId: number; token: Address }[
       }
     }
     if (base) out[key] = { ...base, depthUsd: depth };
+    // LI.FI unreachable or rate-limited: keep the last good quote for up to 24h, flagged stale.
+    else if (c && Date.now() - Date.parse(c.asOf) < 24 * 3_600_000) out[key] = { ...c, costFraction: Math.max(0.0005, c.costFraction), stale: true };
   };
   for (let i = 0; i < uniq.length; i += 3) await Promise.all(uniq.slice(i, i + 3).map(one));
   await mkdir(new URL("../../.state/", import.meta.url), { recursive: true });
-  await writeFile(QUOTE_CACHE, JSON.stringify({ ...cache, ...out }));
+  const fresh = Object.fromEntries(Object.entries(out).filter(([, q]) => !q.stale));
+  await writeFile(QUOTE_CACHE, JSON.stringify({ ...cache, ...fresh }));
   return out;
 };
 
