@@ -3,6 +3,8 @@ import { aavePoolAbi, cometAbi, erc20Abi, wethAbi } from "../abis.ts";
 import { AAVE, GMX, TOKENS, UNISWAP } from "../config.ts";
 import type { Address, Hex, TxStep } from "../types.ts";
 import { getClient } from "../rpc.ts";
+import { chainById } from "../chains.ts";
+import { lifiQuote } from "../sources/xchain.ts";
 import { buildGmxOrder } from "./gmx.ts";
 import { bestRoute, exactInputData } from "./uniswap.ts";
 
@@ -23,6 +25,7 @@ export type Action =
   | { t: "comet.supply"; comet: Address; token: Address; amount: Amount }
   | { t: "comet.withdraw"; comet: Address; token: Address; amount: bigint }
   | { t: "gmx.order"; market: Address; collateralToken: Address; collateralAmount: Amount; sizeUsd: number; isLong: boolean; markPx: number; indexDecimals: number; slippageBps: number; decrease?: boolean }
+  | { t: "bridge"; toChainId: number; fromToken: Address; toToken: Address; amountIn: Amount; slippageBps: number }
   | { t: "raw"; step: TxStep };
 
 export const describe = (a: Action): string => {
@@ -37,6 +40,7 @@ export const describe = (a: Action): string => {
     case "comet.supply": return `supply ${sym(a.token)} to Compound v3`;
     case "comet.withdraw": return `withdraw/borrow ${sym(a.token)} from Compound v3`;
     case "gmx.order": return `GMX ${a.decrease ? "decrease" : "open"} ${a.isLong ? "long" : "short"} $${Math.round(a.sizeUsd)}`;
+    case "bridge": return `bridge ${sym(a.fromToken)} → ${a.toToken.slice(0, 8)} on chain ${a.toChainId} via LI.FI`;
     case "raw": return a.step.label;
   }
 };
@@ -79,7 +83,7 @@ const resolve = async (a: Amount, bal: Balances): Promise<bigint> => {
 };
 
 const approve = (token: Address, spender: Address, amount: bigint): TxStep => ({
-  label: `approve ${sym(token)} for ${spender === AAVE.POOL ? "Aave" : spender === UNISWAP.SWAP_ROUTER_02 ? "Uniswap" : spender === GMX.ROUTER ? "GMX Router" : spender.slice(0, 8)} (exact amount)`,
+  label: `approve ${sym(token)} for ${spender === AAVE.POOL ? "Aave" : spender === UNISWAP.SWAP_ROUTER_02 ? "Uniswap" : spender === GMX.ROUTER ? "GMX Router" : spender.toLowerCase() === "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae" ? "LI.FI Diamond" : spender.slice(0, 8)} (exact amount)`,
   to: token,
   data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amount] }),
   value: 0n,
@@ -149,6 +153,20 @@ export const compile = async (a: Action, ctx: { client: PublicClient; account: A
       if (!a.decrease && coll > 0n) steps.push(approve(a.collateralToken, GMX.ROUTER, coll));
       steps.push({ label: `GMX ${a.decrease ? "decrease" : "increase"} ${a.isLong ? "LONG" : "SHORT"} $${Math.round(a.sizeUsd)} with ${coll} ${sym(a.collateralToken)} collateral`, to: tx.to, data: tx.data, value: tx.value, expect: "order created; a GMX keeper fills it at the next oracle price" });
       return steps;
+    }
+    case "bridge": {
+      // Quote at send time with the real sender and amount: the returned transaction is the one to sign.
+      const amt = await resolve(a.amountIn, bal);
+      if (amt === 0n) throw new Error(`nothing to bridge: ${sym(a.fromToken)} balance is 0`);
+      const q = await lifiQuote({ toChainId: a.toChainId, fromToken: a.fromToken, toToken: a.toToken, fromAmount: amt, fromAddress: account, slippage: a.slippageBps / 1e4 });
+      bal.add(a.fromToken, -amt);
+      const chain = chainById(a.toChainId)?.name ?? String(a.toChainId);
+      const tx = q.transactionRequest;
+      return [approve(a.fromToken, q.estimate.approvalAddress, amt), {
+        label: `bridge ${amt} ${sym(a.fromToken)} → ≥${q.estimate.toAmountMin} of ${a.toToken} on ${chain} via LI.FI/${q.tool} (~${q.estimate.executionDuration}s)`,
+        to: tx.to, data: tx.data, value: BigInt(tx.value ?? "0"),
+        expect: `${q.estimate.toAmount} delivered on ${chain} by the ${q.tool} solver/bridge; not observable on Arbitrum One`,
+      }];
     }
     case "raw":
       return [a.step];

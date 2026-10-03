@@ -1,0 +1,39 @@
+Hold SPCX on Robinhood Chain / short SPCX/USD [ETH-USDC] on GMX
+GMX pays SPCX shorts 33.46%/yr, but SPCX has no spot market on Arbitrum One. Robinhood Chain lists SPCX (SpaceX, +0.00% vs GMX mark). Bridge USDC into it in one transaction (0.37% one way, ~35s) and short the same notional on GMX.
+net  15.27% (gross  22.31%, costs  7.04%), risk D/66: no cross-venue funding reference (source down or not listed) (+18); 33%/yr funding is unlikely to persist (+10); capacity 75k USD (+10); GMX SPCX open interest only $28k: funding swings fast (+10); tokenized stock: issuer eligibility rules and US market-hours pricing vs a 24/7 perp (+8); bridge via symbiosis (~35s); exiting means bridging back (+6); assets sit on Robinhood Chain, an Arbitrum Orbit chain with its own sequencer (+4)
+
+legs:
+  bridge      lifi/symbio… USDC→SPCX                  ×0.67   0.00%  (Arbitrum One → Robinhood Chain)
+  hold        robinhood:w… SPCX                       ×0.67   0.00%  (SpaceX)
+  short-perp  gmx-v2       SPCX/USD [ETH-USDC]        ×0.67   33.46%  (2x, USDC margin on Arbitrum One)
+fork http://127.0.0.1:8547 at block 511421462, account 0xab9755caad245d23a703f1ea5e9a269a2d8a27d0
+  [fund] ✓ wrap 1899531440121847270 wei ETH → WETH  (gas 57975)
+  [fund] ✓ approve WETH for Uniswap (exact amount)  (gas 53464)
+  [fund] ✓ swap 1899531440121847270 WETH → ≥5048047253 USDC via WETH/USDC fees 500  (gas 146661)
+  funded 0xab9755caad245d23a703f1ea5e9a269a2d8a27d0 with 5099.038136 USDC (bought on the forked Uniswap pool) + gas ETH
+✓ approve USDC for LI.FI Diamond (exact amount)  (gas 55449)
+✓ bridge 3333333333 USDC → ≥20787249145914636000 of 0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa on Robinhood Chain via LI.FI/symbiosis (~35s)  (gas 410171)
+✓ approve USDC for GMX Router (exact amount)  (gas 55449)
+✓ GMX increase SHORT $3314 with 1765704803 USDC collateral  (gas 905289)
+
+sent 4 transactions for $5000:
+note: $3333 USDC bridged into SPCX on Robinhood Chain; GMX short sized to the post-bridge notional with $1667 USDC margin on Arbitrum One.
+note: Open the short only after the bridge lands (~a minute) so the hedge never exists without the spot. In fork mode the destination side cannot be observed.
+
+after: {
+ "compound": {},
+ "usdc": "0",
+ "weth": "0",
+ "eth": "2.093258829710776736",
+ "aave": {
+  "collateralUsd": 0,
+  "debtUsd": 0,
+  "healthFactor": "Infinity",
+  "supplied": {},
+  "borrowed": {}
+ },
+ "gmxPendingOrders": [
+  "0x12dd6078744214b2b8583d706523cc1fd373110df8f3706fe5c5230f07e9c057"
+ ],
+ "tokens": {}
+}

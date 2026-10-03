@@ -5,6 +5,7 @@ import { makeContext, type StrategyContext } from "./common.ts";
 import { fixedOpportunities } from "./fixed.ts";
 import { loopOpportunities } from "./loop.ts";
 import { spreadOpportunities } from "./spread.ts";
+import { xchainBasisOpportunities, xchainYieldOpportunities } from "./xchain.ts";
 
 /** Risk-adjusted APR used for ranking: net carry discounted by the risk score. */
 export const riskAdjusted = (o: Opportunity): number => o.netApr * (1 - o.risk.score / 150);
@@ -24,6 +25,8 @@ export const scanMarket = (snap: MarketSnapshot, o: ScanOptions = {}): Opportuni
     ...loopOpportunities(ctx),
     ...fixedOpportunities(ctx),
     ...spreadOpportunities(ctx),
+    ...xchainBasisOpportunities(ctx),
+    ...xchainYieldOpportunities(ctx),
   ];
   const minNet = o.minNetApr ?? 0;
   const minCap = o.minCapacityUsd ?? 10_000;

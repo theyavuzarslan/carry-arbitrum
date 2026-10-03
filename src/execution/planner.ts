@@ -194,6 +194,29 @@ export const planActions = (opp: Opportunity, capitalUsd: number, snap: MarketSn
       }
       break;
     }
+    case "xchain-basis": {
+      const perp = perpOf(snap, String(P.perpMarket));
+      const Lp = Number(P.perpLeverage);
+      const N = (C * Lp) / (Lp + 1);
+      a.push({ t: "bridge", toChainId: Number(P.chainId), fromToken: USDC, toToken: P.token as Address, amountIn: usdc(N), slippageBps: SLIPPAGE_BPS });
+      a.push({ t: "gmx.order", market: perp.gmx!.marketToken, collateralToken: USDC, collateralAmount: { all: USDC }, sizeUsd: N * (1 - Number(P.bridgeCost) - 0.002), isLong: false, markPx: perp.markPx, indexDecimals: perp.gmx!.indexDecimals, slippageBps: PERP_SLIPPAGE_BPS });
+      notes.push(`$${N.toFixed(0)} USDC bridged into ${P.tokenSymbol} on ${P.chain}; GMX short sized to the post-bridge notional with $${(C - N).toFixed(0)} USDC margin on Arbitrum One.`);
+      notes.push(`Open the short only after the bridge lands (~a minute) so the hedge never exists without the spot. In fork mode the destination side cannot be observed.`);
+      break;
+    }
+    case "xchain-yield": {
+      if (P.shape === "direct") {
+        a.push({ t: "bridge", toChainId: Number(P.chainId), fromToken: USDC, toToken: P.token as Address, amountIn: usdc(C), slippageBps: SLIPPAGE_BPS });
+        notes.push(`All $${C} USDC delivered as ${P.tokenSymbol} on ${P.chain} in one LI.FI transaction.`);
+      } else if (P.shape === "levered") {
+        const debt = Number(P.debtRatio) * C;
+        a.push({ t: "aave.supply", token: USDC, amount: usdc(C) });
+        a.push({ t: "aave.borrow", token: USDC, amount: usdc(debt) });
+        a.push({ t: "bridge", toChainId: Number(P.chainId), fromToken: USDC, toToken: P.token as Address, amountIn: { all: USDC }, slippageBps: SLIPPAGE_BPS });
+        notes.push(`$${C} USDC stays on Aave as collateral; $${debt.toFixed(0)} borrowed and delivered as ${P.tokenSymbol} on ${P.chain}.`);
+      } else throw new PlanError("two-step cross-chain deposits are plan-only");
+      break;
+    }
     default:
       throw new PlanError(`no planner for ${opp.strategy}`);
   }

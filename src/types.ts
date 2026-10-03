@@ -82,7 +82,9 @@ export interface MarketSnapshot {
   holdYields: HoldYield[];
   fixed: FixedYieldMarket[];
   prices: Record<string, number>; // symbol -> USD
-  dexDepthUsd?: Record<string, number>; // "A/B" -> USD tradable within 1% price impact on Uniswap v3
+  dexDepthUsd?: Record<string, number>;
+  /** Arbitrum ecosystem chains (Orbit/Nova): spot assets and yields reachable by bridge, with quotes. */
+  eco?: import("./sources/xchain.ts").EcoSnapshot; // "A/B" -> USD tradable within 1% price impact on Uniswap v3
   errors: string[];               // sources that failed; the scan continues without them
 }
 
@@ -94,11 +96,17 @@ export type StrategyId =
   | "lst-loop"           // leveraged staking yield via e-mode
   | "fixed-carry"        // borrow floating, buy fixed PT yield
   | "funding-spread"     // same perp, different venues
+  | "xchain-basis"       // spot on an Arbitrum ecosystem chain, short perp on GMX (Arbitrum One)
+  | "xchain-yield"       // carry target that only exists on an Arbitrum ecosystem chain
   | "wallet";            // wallet-specific (refinance, idle, unhedged, health)
 
 /** One leg of a trade, sized as a fraction of the capital committed. */
 export interface Leg {
-  action: "supply" | "borrow" | "short-perp" | "long-perp" | "swap" | "hold" | "buy-pt" | "repay" | "withdraw" | "close-perp";
+  action: "supply" | "borrow" | "short-perp" | "long-perp" | "swap" | "hold" | "buy-pt" | "repay" | "withdraw" | "close-perp" | "bridge";
+  /** Chain the leg lives on; omitted = Arbitrum One. */
+  chainId?: number;
+  /** One-way cost as a fraction of notional when it is quoted (bridges). */
+  costOneWay?: number;
   venue: string;
   symbol: string;
   weight: number;           // notional / capital (a 2x loop's supply leg has weight 2)

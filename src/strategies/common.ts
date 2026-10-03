@@ -109,6 +109,7 @@ export const roundTripCost = (legs: Leg[]): number => {
     if (l.action === "swap") c += 2 * (swapCostBps(l.symbol) / 1e4) * l.weight;
     if (l.action === "short-perp" || l.action === "long-perp") c += 2 * (GMX.POSITION_FEE_BPS / 1e4) * l.weight;
     if (l.action === "buy-pt") c += 2 * (15 / 1e4) * l.weight; // Pendle AMM fee + impact, conservative
+    if (l.action === "bridge") c += 2 * (l.costOneWay ?? 0.01) * l.weight; // quoted in, assumed symmetric out
   }
   return c;
 };

@@ -29,6 +29,18 @@ Live output from `node src/cli.ts scan --exec` (rates move; rerun it):
 
 The scanner also shows about 90 non-executable signals, such as Fluid and Morpho supply rates, sUSDai and Pendle PTs, and cross-venue funding against Hyperliquid, Binance and Bybit. They are labelled "info" and ranked lower.
 
+## Cross-chain sourcing: Arbitrum ecosystem chains
+
+Some carry exists on Arbitrum One only on one side. GMX lists perps on SPY, QQQ, SpaceX (SPCX), gold, silver and oil, but none of those trade as spot on Arbitrum One. When the bot finds a trade whose asset or pool is missing on Arbitrum One, it looks for it on the other Arbitrum chains: Robinhood Chain, Plume, ApeChain, Gravity and Arbitrum Nova. It then prices the bridge into the trade.
+
+- **Asset discovery.** It reads LI.FI's token lists for those chains. A GMX perp is matched to a token there by symbol (`src/chains.ts`). An exact match must price within 3% of GMX's mark: tokenized SPY on Robinhood Chain sits 0.1% from GMX's SPY. ETF proxies such as SLV for silver and USO for oil are allowed but carry tracking-error risk points.
+- **Yield discovery.** It reads DefiLlama pools on those chains, such as Morpho USDG vaults and USDe on Robinhood Chain, or Nest RWA vaults on Plume. Each is joined to a token LI.FI can deliver.
+- **Bridge pricing.** It takes live LI.FI quotes from Arbitrum One USDC at $1k, $10k and $50k. One-way cost comes from the $10k quote and is charged on entry and exit. Depth is the largest size that costs under 1.5%. Quotes are cached for 15 minutes.
+- **Two new strategy families.** `xchain-basis` holds the spot on the other chain and shorts GMX on Arbitrum One. `xchain-yield` either bridges USDC straight into the yield token, or keeps USDC collateral on Aave and bridges only the borrowed USDC. A vault that LI.FI can't deliver in one hop, such as Plume's Nest vaults, shows as a plan-only signal with the bridge leg priced.
+- **Execution.** The bridge is one LI.FI transaction on Arbitrum One, quoted at send time with the real sender and amount, with an exact approval. In live mode the executor waits until LI.FI reports the transfer as delivered before opening the hedge.
+
+Set `CARRY_XCHAIN=0` to turn the layer off and `LIFI_API_KEY` to lift LI.FI's keyless rate limit.
+
 ## Strategy families
 
 | Family | Legs | Venues |
@@ -40,6 +52,8 @@ The scanner also shows about 90 non-executable signals, such as Fluid and Morpho
 | **lst-loop** | wstETH/weETH collateral, WETH debt in e-mode, looped | Aave e-mode 2/7, Compound cWETHv3, CarryAccount contract |
 | **fixed-carry** | Pendle PT fixed yield vs the best floating stable rate | Pendle (signal) |
 | **funding-spread** | same perp on GMX vs Hyperliquid/Binance/Bybit | GMX + off-chain (signal) |
+| **xchain-basis** | spot on an Arbitrum ecosystem chain + short GMX perp on Arbitrum One | LI.FI, Robinhood Chain / Plume, GMX |
+| **xchain-yield** | bridge USDC (or Aave-borrowed USDC) into a yield that only exists on an ecosystem chain | LI.FI, Aave, Robinhood Chain / Plume |
 
 Each opportunity carries its legs, gross APR, round-trip costs amortized over the holding horizon, net APR, leverage, capacity, a 0–100 risk score with reasons, and whether this bot can execute it.
 
@@ -86,6 +100,7 @@ GMX orders are two-step: the transaction creates an order, and a GMX keeper fill
 | Reverse basis (ETH) | $10,000 | 9 | 2.68 WETH borrowed on Aave and sold; $4,815 GMX long plus 0.893 WETH margin; delta-neutral; Aave HF 1.62 (target 1.60) |
 | 5x wstETH loop via CarryAccount | $8,000 | 5 (swap, deploy, approve, openLoop) | $39,974 collateral, $32,004 debt, **5.02x, HF 1.199** (the scanner predicted 1.20) in one flash-loan transaction |
 | 5x wstETH loop on Compound, iterative | $8,000 | 15 rounds (79 lines incl. approvals) | 11.18 wstETH collateral, 10.96 WETH debt, **4.67x** — why the flash-loan contract exists |
+| SPCX cross-chain basis | $5,000 | 4 | $3,333 USDC sent through LI.FI into SPCX on Robinhood Chain; $3,314 GMX SPCX short with USDC margin; order key pending. The destination side is not observable on a fork. |
 
 ## The CarryAccount contract
 
@@ -126,3 +141,5 @@ Set `ARB_RPC_URLS` to a private RPC for heavy use; the public fallbacks are rate
 - GMX funding is adaptive and changes hourly. The APRs are current rates, not forecasts.
 - Refinancing across venues is suggested, not executed.
 - Live mode has not been run with real funds in this build.
+- Cross-chain trades were verified on the Arbitrum One side only; delivery on Robinhood Chain was never observed. Tokenized stocks may be subject to issuer eligibility rules, and their prices follow US market hours while GMX trades 24/7.
+- Unwinding a cross-chain trade means bridging back; that route is not built yet.

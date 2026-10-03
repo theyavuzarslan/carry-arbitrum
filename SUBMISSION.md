@@ -17,7 +17,8 @@ Carry on Arbitrum is scattered. Funding lives on GMX, borrow rates on Aave and C
 3. **Wallet scanner.** It reads balances and Aave, Compound, GMX and Pendle positions, and turns them into dollar-per-year suggestions with health alerts first.
 4. **Executor.** Planner and compiler with exact approvals and simulate-before-send, in three modes: plan, anvil fork of Arbitrum One, and capped live.
 5. **CarryAccount contract.** A flash-loan LST loop open and close in one transaction, with 10 Foundry fork tests.
-6. **Bot loop and dashboard.** Scan, enter under risk and budget gates, mark to market, exit on carry decay, and alert on health factor.
+6. **Cross-chain sourcing across the Arbitrum ecosystem.** When an asset or pool is missing on Arbitrum One, the bot finds it on Robinhood Chain, Plume, ApeChain, Gravity or Nova. Examples are tokenized SPY, QQQ and SPCX to hedge GMX's stock perps, and USDe or RWA vaults for yield. It prices the LI.FI bridge into the trade and executes the bridge as one Arbitrum One transaction.
+7. **Bot loop and dashboard.** Scan, enter under risk and budget gates, mark to market, exit on carry decay, and alert on health factor.
 
 ## Why it fits Arbitrum
 

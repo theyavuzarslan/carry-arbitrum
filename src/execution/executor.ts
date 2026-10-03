@@ -8,6 +8,7 @@ import { clientFor, getClient } from "../rpc.ts";
 import type { Address, ExecutionPlan, Hex, MarketSnapshot, Opportunity, TxStep } from "../types.ts";
 import { chainBalances, compile, describe, ledgerBalances, type Action } from "./actions.ts";
 import { pendingOrders } from "./gmx.ts";
+import { waitForBridge } from "../sources/xchain.ts";
 import { contractAvailable, deployData, openLoopTxs, readLoop } from "./carryAccount.ts";
 import { planActions, units } from "./planner.ts";
 import { tokenAddress } from "../tokens.ts";
@@ -79,7 +80,7 @@ const liveSender = (privateKey: Hex): Sender => {
 export interface SendResult { label: string; hash: Hex; status: "success" | "reverted"; gasUsed: bigint }
 
 /** Compile each action against live balances just before sending it, then wait for the receipt. */
-export const sendActions = async (actions: Action[], o: { client: PublicClient; account: Address; send: Sender; log: (s: string) => void }): Promise<SendResult[]> => {
+export const sendActions = async (actions: Action[], o: { client: PublicClient; account: Address; send: Sender; log: (s: string) => void; waitBridges?: boolean }): Promise<SendResult[]> => {
   const out: SendResult[] = [];
   const bal = chainBalances(o.client, o.account);
   for (const a of actions) {
@@ -96,6 +97,13 @@ export const sendActions = async (actions: Action[], o: { client: PublicClient; 
       out.push({ label: s.label, hash, status: r.status, gasUsed: r.gasUsed });
       o.log(`${r.status === "success" ? "✓" : "✗"} ${s.label}  (gas ${r.gasUsed})`);
       if (r.status !== "success") throw new Error(`reverted: ${s.label} (${hash})`);
+      // Live only: never open the hedge before the bridged spot has landed on the other chain.
+      if (a.t === "bridge" && s === steps.at(-1) && o.waitBridges) {
+        o.log(`waiting for the bridge to land on chain ${a.toChainId}…`);
+        const st = await waitForBridge(hash, undefined, o.log);
+        if (st !== "DONE") throw new Error(`bridge ${hash} ${st}: stopping before the next leg`);
+        o.log(`✓ bridge delivered on chain ${a.toChainId}`);
+      }
     }
     void describe;
   }
@@ -222,7 +230,7 @@ export const execute = async (opp: Opportunity, snap: MarketSnapshot, o: Execute
     const client = getClient();
     const plan = await buildPlan(opp, o.capitalUsd, account, snap, client);
     const before = await readAccountState(client, account);
-    const ctx = { client, account, send: liveSender(o.privateKey), log };
+    const ctx = { client, account, send: liveSender(o.privateKey), log, waitBridges: true };
     const txs = useContract(opp) ? (await loopViaContract(opp, snap, o.capitalUsd, ctx)).txs : await sendActions(planActions(opp, o.capitalUsd, snap).actions, ctx);
     return { mode: "live", account, plan, txs, before, after: await readAccountState(client, account) };
   }
