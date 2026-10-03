@@ -1,3 +1,4 @@
+import { getAddress } from "viem";
 import type { Address } from "./types.ts";
 
 /**
@@ -77,6 +78,26 @@ export const PERP_TO_SPOT: Record<string, keyof typeof TOKENS> = {
   LINK: "LINK",
   GMX: "GMX",
 };
+
+/**
+ * Protocol fees: how Carry earns on self-custody execution. Both are paid by the user on-chain at
+ * execution time through the venues' own integrator hooks, and both are charged in every net APR the
+ * scanner shows, so users see what they actually keep.
+ *  - GMX v2 UI fee: the ExchangeRouter pays `uiFeeReceiver` a fee on position size. The receiver
+ *    sets its own factor (ExchangeRouter.setUiFeeFactor); GMX caps it at 10 bps
+ *    (DataStore MAX_UI_FEE_FACTOR = 1e27 / 1e30, read 2026-10-04).
+ *  - LI.FI integrator fee: a fraction of the bridged amount, forwarded to the integrator's fee wallet.
+ */
+export const FEES = {
+  gmxUiFeeReceiver: getAddress((process.env.CARRY_UI_FEE_RECEIVER || "0x0000000000000000000000000000000000000000").toLowerCase()) as Address,
+  gmxUiFeeBps: Number(process.env.CARRY_GMX_UI_FEE_BPS ?? 5),
+  lifiIntegrator: process.env.CARRY_LIFI_INTEGRATOR ?? "",
+  lifiFeeBps: Number(process.env.CARRY_LIFI_FEE_BPS ?? 10),
+};
+export const feesEnabled = () => ({
+  gmx: FEES.gmxUiFeeReceiver !== "0x0000000000000000000000000000000000000000" ? FEES.gmxUiFeeBps : 0,
+  lifi: FEES.lifiIntegrator ? FEES.lifiFeeBps : 0,
+});
 
 /** Strategy and risk defaults. Every one can be overridden from the CLI or env. */
 export const DEFAULTS = {

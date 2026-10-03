@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { ARBITRUM_ONE, ECO_CHAINS, SPOT_ALIASES, chainById } from "../chains.ts";
-import { LLAMA_YIELDS, TOKENS } from "../config.ts";
+import { FEES, LLAMA_YIELDS, TOKENS } from "../config.ts";
 import { getJson } from "../rpc.ts";
 import { isStable, normalizeSymbol } from "../tokens.ts";
 import type { Address, Hex, PerpMarket } from "../types.ts";
@@ -123,6 +123,8 @@ export const lifiQuote = async (a: { toChainId: number; fromToken: Address; toTo
     fromChain: String(ARBITRUM_ONE), toChain: String(a.toChainId), fromToken: a.fromToken, toToken: a.toToken,
     fromAmount: a.fromAmount.toString(), fromAddress: a.fromAddress, slippage: String(a.slippage ?? 0.005),
   });
+  // Carry's integrator fee, paid at execution through LI.FI's fee forwarder (config FEES).
+  if (FEES.lifiIntegrator) { q.set("integrator", FEES.lifiIntegrator); q.set("fee", String(FEES.lifiFeeBps / 1e4)); }
   const res = await fetch(`${LIFI}/quote?${q}`, { headers: lifiHeaders(), signal: AbortSignal.timeout(40_000) });
   const body = (await res.json()) as LifiQuote & { message?: string };
   if (!res.ok || !body.transactionRequest) throw new Error(`LI.FI quote failed: ${body.message ?? res.status}`);

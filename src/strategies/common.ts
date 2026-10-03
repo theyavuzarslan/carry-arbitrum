@@ -1,4 +1,4 @@
-import { DEFAULTS, GMX } from "../config.ts";
+import { DEFAULTS, GMX, feesEnabled } from "../config.ts";
 import { isEthLike, isEuro, isStable } from "../tokens.ts";
 import type { Leg, LendingMarket, MarketSnapshot, Opportunity, PerpMarket, RiskAssessment, StrategyId } from "../types.ts";
 
@@ -107,9 +107,12 @@ export const roundTripCost = (legs: Leg[]): number => {
   let c = 0;
   for (const l of legs) {
     if (l.action === "swap") c += 2 * (swapCostBps(l.symbol) / 1e4) * l.weight;
-    if (l.action === "short-perp" || l.action === "long-perp") c += 2 * (GMX.POSITION_FEE_BPS / 1e4) * l.weight;
+    // GMX position fee plus Carry's UI fee when one is configured (both on open and close).
+    if ((l.action === "short-perp" || l.action === "long-perp") && l.venue === "gmx-v2") c += 2 * ((GMX.POSITION_FEE_BPS + feesEnabled().gmx) / 1e4) * l.weight;
+    else if (l.action === "short-perp" || l.action === "long-perp") c += 2 * (GMX.POSITION_FEE_BPS / 1e4) * l.weight;
     if (l.action === "buy-pt") c += 2 * (15 / 1e4) * l.weight; // Pendle AMM fee + impact, conservative
-    if (l.action === "bridge") c += 2 * (l.costOneWay ?? 0.01) * l.weight; // quoted in, assumed symmetric out
+    // Quoted bridge cost (already includes Carry's LI.FI fee when the quote carried one), both ways.
+    if (l.action === "bridge") c += 2 * (l.costOneWay ?? 0.01) * l.weight;
   }
   return c;
 };

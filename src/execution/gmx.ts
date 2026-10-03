@@ -1,6 +1,6 @@
 import { encodeAbiParameters, encodeFunctionData, keccak256, type PublicClient } from "viem";
 import { gmxDataStoreAbi, gmxExchangeRouterAbi } from "../abis.ts";
-import { GMX } from "../config.ts";
+import { FEES, GMX } from "../config.ts";
 import type { Address, Hex } from "../types.ts";
 
 const ZERO = "0x0000000000000000000000000000000000000000" as const;
@@ -40,7 +40,7 @@ export const buildGmxOrder = (o: GmxOrderInput): { to: Address; data: Hex; value
   const buying = o.decrease ? !o.isLong : o.isLong;
   const acceptable = o.markPx * (buying ? 1 + o.slippageBps / 1e4 : 1 - o.slippageBps / 1e4);
   const params = {
-    addresses: { receiver: o.account, cancellationReceiver: o.account, callbackContract: ZERO, uiFeeReceiver: ZERO, market: o.market, initialCollateralToken: o.collateralToken, swapPath: [] as Address[] },
+    addresses: { receiver: o.account, cancellationReceiver: o.account, callbackContract: ZERO, uiFeeReceiver: FEES.gmxUiFeeReceiver, market: o.market, initialCollateralToken: o.collateralToken, swapPath: [] as Address[] },
     numbers: {
       sizeDeltaUsd: BigInt(Math.floor(o.sizeUsd * 1e6)) * 10n ** 24n,
       initialCollateralDeltaAmount: o.collateralAmount,
