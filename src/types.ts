@@ -84,7 +84,9 @@ export interface MarketSnapshot {
   prices: Record<string, number>; // symbol -> USD
   dexDepthUsd?: Record<string, number>;
   /** Arbitrum ecosystem chains (Orbit/Nova): spot assets and yields reachable by bridge, with quotes. */
-  eco?: import("./sources/xchain.ts").EcoSnapshot; // "A/B" -> USD tradable within 1% price impact on Uniswap v3
+  eco?: import("./sources/xchain.ts").EcoSnapshot;
+  /** Cross-exchange price pairs for one-off arbitrage. */
+  arb?: { cexDex: import("./sources/arb.ts").PricePair[] }; // "A/B" -> USD tradable within 1% price impact on Uniswap v3
   errors: string[];               // sources that failed; the scan continues without them
 }
 
@@ -98,6 +100,8 @@ export type StrategyId =
   | "funding-spread"     // same perp, different venues
   | "xchain-basis"       // spot on an Arbitrum ecosystem chain, short perp on GMX (Arbitrum One)
   | "xchain-yield"       // carry target that only exists on an Arbitrum ecosystem chain
+  | "cex-dex-arb"        // one-off: same asset, Uniswap (Arbitrum One) vs Binance
+  | "xchain-arb"         // one-off: same asset across Arbitrum chains, or stock token vs GMX mark
   | "wallet";            // wallet-specific (refinance, idle, unhedged, health)
 
 /** One leg of a trade, sized as a fraction of the capital committed. */

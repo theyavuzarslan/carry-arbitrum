@@ -54,6 +54,14 @@ Set `CARRY_XCHAIN=0` to turn the layer off and `LIFI_API_KEY` to lift LI.FI's ke
 | **funding-spread** | same perp on GMX vs Hyperliquid/Binance/Bybit | GMX + off-chain (signal) |
 | **xchain-basis** | spot on an Arbitrum ecosystem chain + short GMX perp on Arbitrum One | LI.FI, Robinhood Chain / Plume, GMX |
 | **xchain-yield** | bridge USDC (or Aave-borrowed USDC) into a yield that only exists on an ecosystem chain | LI.FI, Aave, Robinhood Chain / Plume |
+| **cex-dex-arb** (one-off) | same asset, Uniswap v3 on Arbitrum One vs Binance spot, inventory on both sides | Uniswap QuoterV2 + Binance book (signal) |
+| **xchain-arb** (one-off) | a tokenized stock on Robinhood Chain priced away from GMX's mark beyond round-trip costs | LI.FI + GMX (signal) |
+
+Funding-fee yield appears three ways: GMX funding collected against spot (**basis**, **reverse-basis**, **xchain-basis**), and GMX against Hyperliquid, Binance or Bybit (**funding-spread**).
+
+**Arbitrage is not carry.** An arbitrage edge is earned once per round trip, so arbitrage rows show the edge after costs, are never annualized, and always rank after the carry trades. Uniswap's side is a live QuoterV2 quote at $10k in both directions, with fees and impact included. Binance's side is the best bid and ask, converted from USDT with its USDC/USDT book, minus a 0.1% taker fee. A plain "same token on two Arbitrum chains" check was built and then removed. LI.FI's index prices on thin chains showed gaps of 19% to over 2,000% that no firm quote supports.
+
+Venues considered but not added: gTrade's v10 funding is skew-based, and its units could not be verified in time. Rates the bot can't verify are not shown.
 
 Each opportunity carries its legs, gross APR, round-trip costs amortized over the holding horizon, net APR, leverage, capacity, a 0–100 risk score with reasons, and whether this bot can execute it.
 
