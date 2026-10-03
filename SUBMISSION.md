@@ -1,6 +1,10 @@
 # Carry — submission
 
-> **Fill in before submitting:** hackathon name: `____`. Track: `____`. Team: `____`. Demo video: `____`. Repo URL: `____`.
+> **Hackathon:** Arbitrum Open House Singapore, Online Buildathon (HackQuest). Submissions close 4 Oct 2026, 18:59 (UTC+3).
+> **Tracks:** Overall prize (aiming at the Robinhood Chain reserved place) and Promising Products (AI agents, new financial primitives).
+> **Still to fill:** team `____` · demo video `____` · repo URL `____` · deployed contract addresses `____` (deployment on an Arbitrum chain is required to qualify).
+
+Business and fee model: [BUSINESS.md](BUSINESS.md).
 
 ## One line
 
