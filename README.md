@@ -137,6 +137,10 @@ GMX orders are two-step: the transaction creates an order, and a GMX keeper fill
 
 [contracts/](contracts/) holds `CarryAccount`, a per-user smart account that opens and closes a leveraged LST loop on Aave v3 in **one transaction** using an Aave flash loan (swap on Uniswap, supply, borrow, repay the flash loan, check the health factor). The TypeScript executor deploys it and uses it for Aave LST loops in fork and live mode. That is 4 transactions instead of about 15. 10 Foundry fork tests pass against live Arbitrum state; see [contracts/README.md](contracts/README.md).
 
+## Deployed
+
+CarryVault, a USDG vault with a performance fee above a high-water mark, is live on **Robinhood Chain testnet**. It is at [`0x330677cDA0fc0C7a184A3a150fb08De973A9C4F1`](https://explorer.testnet.chain.robinhood.com/address/0x330677cDA0fc0C7a184A3a150fb08De973A9C4F1), its source is verified, and it holds a 1 USDG seed deposit. See [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
+
 ## The bot loop
 
 `run` repeats every `--interval` seconds:
