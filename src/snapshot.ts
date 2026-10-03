@@ -11,7 +11,8 @@ import { readHoldYields, readLlamaLending } from "./sources/llama.ts";
 import { readPendle } from "./sources/pendle.ts";
 import { matchSpots, quoteBridges, readEcoTokens, readEcoYields, type EcoSnapshot } from "./sources/xchain.ts";
 import { ECO_CHAINS } from "./chains.ts";
-import { PERP_TO_SPOT } from "./config.ts";
+import { PERP_TO_SPOT, TOKENS } from "./config.ts";
+import { checkTokens, GOPLUS_CHAINS } from "./guardrails/tokenSecurity.ts";
 import type { MarketSnapshot } from "./types.ts";
 
 const STATE_DIR = new URL("../.state/", import.meta.url);
@@ -53,6 +54,14 @@ export const takeSnapshot = async (client: PublicClient = getClient()): Promise<
   const dexDepthUsd = await settle("uniswap-depth", readDexDepth(client, prices), errors, {});
   const eco = await settle("ecosystem-chains", readEco(gmx.perps), errors, undefined);
   const cexDex = await settle("binance-arb", readCexDex(client, prices), errors, []);
+  // Token security for everything the bot can hold: Arbitrum tokens, ecosystem spot and yield tokens.
+  const secTargets = [
+    ...Object.values(TOKENS).map((a) => ({ chainId: 42161, address: a })),
+    ...aave.filter((m) => m.asset).map((m) => ({ chainId: 42161, address: m.asset })),
+    ...(eco?.spots ?? []).map((s) => ({ chainId: s.chainId, address: s.token.address })),
+    ...(eco?.yields ?? []).filter((y) => GOPLUS_CHAINS.has(y.chainId)).map((y) => ({ chainId: y.chainId, address: y.token.address })),
+  ];
+  const security = process.env.CARRY_SECURITY === "0" ? {} : await settle("goplus", checkTokens(secTargets), errors, {});
 
   return {
     asOf: new Date().toISOString(),
@@ -64,6 +73,7 @@ export const takeSnapshot = async (client: PublicClient = getClient()): Promise<
     dexDepthUsd,
     eco,
     arb: { cexDex },
+    security,
     errors,
   };
 };

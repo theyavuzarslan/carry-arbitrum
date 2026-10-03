@@ -147,6 +147,13 @@ export const assemble = (
     if (d === undefined && x === "USDC" && depth[[y, "WETH"].sort().join("/")] !== undefined) d = Math.min(depth["USDC/WETH"] ?? Infinity, depth[[y, "WETH"].sort().join("/")]!);
     if (d !== undefined) capacity = Math.min(capacity, d / Math.max(l.weight, 1e-9));
   }
+  // Perp legs cap capacity at 15% of the market's open interest: beyond that the position becomes the
+  // skew and GMX's adaptive funding turns against it (the guardrail blocks above 50%).
+  for (const l of a.legs) {
+    if (!(l.action === "short-perp" || l.action === "long-perp") || l.venue !== "gmx-v2") continue;
+    const p = ctx.snap.perps.find((x) => x.venue === "gmx-v2" && x.name === l.symbol);
+    if (p) capacity = Math.min(capacity, (0.15 * (p.openInterestLongUsd + p.openInterestShortUsd)) / Math.max(l.weight, 1e-9));
+  }
   const score = Math.max(0, Math.min(100, a.riskFactors.reduce((s, f) => s + f.points, 0)));
   return {
     id: a.id,

@@ -88,6 +88,29 @@ Each opportunity carries its legs, gross APR, round-trip costs amortized over th
 
 Each suggestion shows the dollars per year it adds on the amount it touches.
 
+## Guardrails: token security and entry/exit liquidity
+
+Every plan, and every fork or live execution, first runs `runGuardrails` (`src/guardrails/`). Run it directly with `node src/cli.ts check <id> --capital 50000`.
+
+**Token security (GoPlus).** Every token the trade would hold is checked on its own chain. GoPlus covers Arbitrum One, Robinhood Chain and Gravity. Results are cached for 24 hours.
+
+| Verdict | Triggers |
+| --- | --- |
+| **Block** | honeypot, can't sell all, buying disabled, buy or sell tax above 0.5%, owner can change balances, hidden owner, self-destruct, modifiable tax, trading cooldown, airdrop scam, unverified source |
+| **Warn** | mintable, external calls on transfer |
+| **Info** | upgradeable proxy, blacklist, pausable transfers. USDC, USDT0, WETH and ARB all have these, so warning on them would hide the real signals. |
+| **Unverified** | the chain isn't covered (Plume, ApeChain, Nova). Live mode treats this as a block unless `CARRY_ALLOW_UNVERIFIED=1`. |
+
+The scanner applies the same verdicts. A blocked token makes its trade non-executable and adds 40 risk points, but the trade stays visible with the reason. Example: the GMX-token basis trade is blocked because GoPlus reports its owner can change balances. `CARRY_TOKEN_ALLOWLIST=42161:0x…` lets an operator accept a reviewed token; it then shows as allowlisted.
+
+**Entry and exit liquidity, at the actual size**
+
+- **Uniswap legs.** Both directions are quoted live and the round-trip loss is measured. Above 0.6% warns, above 1.5% blocks.
+- **Aave and Compound supply.** Withdrawable cash must cover the position: below 1× blocks, below 5× or above 95% utilization warns.
+- **Borrows.** Need borrowable headroom.
+- **GMX perps.** Need open-interest room to enter. A position above 50% of a market's open interest blocks: it would become the skew, and GMX's adaptive funding would turn against it. Above 15% warns. Scanner capacity is also capped at 15% of open interest.
+- **Bridged tokens.** Exit liquidity on the destination chain comes from GoPlus's DEX data. Below 2× the position blocks; below 10× warns.
+
 ## Execution
 
 The planner turns an opportunity into actions (swap, supply, borrow, e-mode, GMX order). The compiler turns each action into exact transactions just before it is sent, so a supply uses the real output of the swap before it. Approvals are always exact, never unlimited. Every transaction is simulated before sending, so a revert reports its reason.

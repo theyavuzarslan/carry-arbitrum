@@ -11,6 +11,7 @@ import { pendingOrders } from "./gmx.ts";
 import { waitForBridge } from "../sources/xchain.ts";
 import { contractAvailable, deployData, openLoopTxs, readLoop } from "./carryAccount.ts";
 import { planActions, units } from "./planner.ts";
+import { blocksExecution, runGuardrails } from "../guardrails/index.ts";
 import { tokenAddress } from "../tokens.ts";
 
 export type Mode = "plan" | "fork" | "live";
@@ -18,10 +19,21 @@ export type Mode = "plan" | "fork" | "live";
 /** Compile a plan for display: amounts that depend on earlier outputs use quoted estimates. */
 export const buildPlan = async (opp: Opportunity, capitalUsd: number, account: Address, snap: MarketSnapshot, client: PublicClient = getClient()): Promise<ExecutionPlan> => {
   const { actions, notes } = planActions(opp, capitalUsd, snap);
+  const guard = await runGuardrails(opp, capitalUsd, snap);
+  notes.unshift(`Guardrails: ${guard.verdict.toUpperCase()} (${guard.checks.filter((c) => c.verdict !== "pass").length} of ${guard.checks.length} checks flagged)`);
   const bal = ledgerBalances({ [TOKENS.USDC]: units(snap, "USDC", capitalUsd) });
   const steps: TxStep[] = [];
   for (const a of actions) steps.push(...(await compile(a, { client, account, bal })));
-  return { opportunityId: opp.id, account, capitalUsd, steps, notes };
+  return { opportunityId: opp.id, account, capitalUsd, steps, notes, guard };
+};
+
+/** Refuse to send anything a guardrail blocks; print warnings. */
+const enforceGuard = async (opp: Opportunity, capitalUsd: number, snap: MarketSnapshot, mode: "fork" | "live", log: (s: string) => void) => {
+  const g = await runGuardrails(opp, capitalUsd, snap);
+  for (const c of g.checks.filter((x) => x.verdict !== "pass")) log(`guardrail ${c.verdict.toUpperCase()}: ${c.name}: ${c.detail}`);
+  const blocks = blocksExecution(g, mode);
+  if (blocks.length) throw new Error(`blocked by guardrails:\n  - ${blocks.join("\n  - ")}`);
+  log(`guardrails ${g.verdict.toUpperCase()}: ${g.checks.length} checks, nothing blocking`);
 };
 
 // ---------------------------------------------------------------- fork (anvil)
@@ -226,6 +238,7 @@ export const execute = async (opp: Opportunity, snap: MarketSnapshot, o: Execute
     if (!o.confirm) throw new Error("live mode needs --yes: it sends real transactions");
     if (o.capitalUsd > cap) throw new Error(`capital $${o.capitalUsd} exceeds CARRY_MAX_CAPITAL_USD=$${cap}`);
     if (opp.risk.score > Number(process.env.CARRY_MAX_RISK ?? 60)) throw new Error(`risk score ${opp.risk.score} above CARRY_MAX_RISK`);
+    await enforceGuard(opp, o.capitalUsd, snap, "live", log);
     const account = privateKeyToAccount(o.privateKey).address;
     const client = getClient();
     const plan = await buildPlan(opp, o.capitalUsd, account, snap, client);
@@ -235,6 +248,7 @@ export const execute = async (opp: Opportunity, snap: MarketSnapshot, o: Execute
     return { mode: "live", account, plan, txs, before, after: await readAccountState(client, account) };
   }
   // fork
+  await enforceGuard(opp, o.capitalUsd, snap, "fork", log);
   const fork = o.fork ?? (await startFork());
   try {
     const account = o.account ?? (`0x${[...crypto.getRandomValues(new Uint8Array(20))].map((b) => b.toString(16).padStart(2, "0")).join("")}` as Address);

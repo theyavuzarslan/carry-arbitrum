@@ -6,6 +6,7 @@ import { execute } from "./execution/executor.ts";
 import { toJson } from "./json.ts";
 import { walletReport } from "./portfolio/opportunities.ts";
 import { serve } from "./server.ts";
+import { runGuardrails } from "./guardrails/index.ts";
 import { getSnapshot } from "./snapshot.ts";
 import { riskAdjusted, scanMarket } from "./strategies/index.ts";
 import type { Address, Opportunity } from "./types.ts";
@@ -103,6 +104,7 @@ const main = async () => {
       console.log(`\n${mode === "plan" ? "transactions (not sent)" : `sent ${res.txs.length} transactions`} for $${capital}:`);
       if (mode === "plan") res.plan.steps.forEach((s, i) => console.log(`  ${i + 1}. ${s.label}\n     to ${s.to}${s.value ? ` value ${s.value}` : ""} data ${s.data.slice(0, 10)}…(${(s.data.length - 2) / 2} bytes)`));
       for (const n of res.plan.notes) console.log(`note: ${n}`);
+      if (res.plan.guard) for (const c of res.plan.guard.checks.filter((x) => x.verdict !== "pass")) console.log(`guardrail ${c.verdict.toUpperCase()}: ${c.name}: ${c.detail}`);
       if (res.after) console.log(`\nafter: ${toJson(res.after, 1)}`);
       return;
     }
@@ -114,6 +116,15 @@ const main = async () => {
       if (values.iterations) cfg.iterations = Number(values.iterations);
       if (values["min-net"]) cfg.minNetApr = Number(values["min-net"]);
       return runBot(cfg);
+    }
+    case "check": {
+      // Pre-trade guardrails at a size: token security and entry/exit liquidity.
+      const { snap, opp } = await findOpp(arg ?? "1");
+      const capital = Number(values.capital ?? 10_000);
+      const g = await runGuardrails(opp, capital, snap);
+      console.log(`${opp.title}\nguardrails at $${capital.toLocaleString()}: ${g.verdict.toUpperCase()}\n`);
+      for (const c of g.checks) console.log(`  ${c.verdict === "pass" ? "ok   " : c.verdict === "warn" ? "WARN " : c.verdict === "block" ? "BLOCK" : "UNVER"} ${c.name}: ${c.detail}`);
+      return;
     }
     case "demo": {
       // Two-minute tour on live data: executable market carry, then a real wallet.
@@ -141,7 +152,8 @@ const main = async () => {
   execute <rank|id> --mode live --yes  sign with CARRY_PRIVATE_KEY (capped by CARRY_MAX_CAPITAL_USD)
   run [--mode dry-run|fork|live] [--interval 300] [--budget 25000] [--ticket 10000] [--iterations N]
   serve [--port 8787]                  dashboard + JSON API
-  demo [0xaddress]                     top executable trades + a wallet report`);
+  demo [0xaddress]                     top executable trades + a wallet report
+  check <rank|id> [--capital 10000]    guardrails: token security (GoPlus) + entry/exit liquidity`);
   }
 };
 

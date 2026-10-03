@@ -85,6 +85,8 @@ export interface MarketSnapshot {
   dexDepthUsd?: Record<string, number>;
   /** Arbitrum ecosystem chains (Orbit/Nova): spot assets and yields reachable by bridge, with quotes. */
   eco?: import("./sources/xchain.ts").EcoSnapshot;
+  /** GoPlus token-security verdicts keyed "chainId:address" (cached 24h). */
+  security?: Record<string, import("./guardrails/tokenSecurity.ts").TokenVerdict>;
   /** Cross-exchange price pairs for one-off arbitrage. */
   arb?: { cexDex: import("./sources/arb.ts").PricePair[] }; // "A/B" -> USD tradable within 1% price impact on Uniswap v3
   errors: string[];               // sources that failed; the scan continues without them
@@ -162,6 +164,8 @@ export interface ExecutionPlan {
   capitalUsd: number;
   steps: TxStep[];
   notes: string[];
+  /** Pre-trade guardrails at this size: token security and entry/exit liquidity. */
+  guard?: import("./guardrails/index.ts").GuardReport;
 }
 
 export interface WalletPosition {
