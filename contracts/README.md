@@ -44,6 +44,10 @@ right e-mode id and Uniswap fee tier. Only wstETH/WETH is tested.
 | `src/CarryAccountFactory.sol` | Deploys one `CarryAccount` per `msg.sender`, records it in `accountOf`, emits `AccountCreated(owner, account)`. |
 | `src/interfaces/*.sol` | Minimal local interfaces: `IPool`, `IFlashLoanSimpleReceiver`, `IERC20`, `ISwapRouter02`, `IAaveOracle`. |
 | `src/libraries/SafeTransferLib.sol` | Tiny safe transfer/approve helpers (handles no-bool-return tokens and "approve to 0 first" tokens). |
+| `src/CarryVault.sol` | ERC-4626 managed vault (USDG on Robinhood Chain, USDC/USDG on Arbitrum One) with a 10% high-water-mark performance fee. See [CarryVault](#carryvault). |
+| `script/Deploy.s.sol` | `DeployRobinhoodTestnet` (USDG vault on Robinhood testnet, optional `MockUSDG` fallback, 1 USDG seed deposit), `DeployArbitrum` (factory, Arbitrum Sepolia or One), `DeployRobinhoodVault` (mainnet USDG vault), `DeployArbitrumVault` (USDG vault on Sepolia / USDC on One). Step-by-step in [`../DEPLOY.md`](../DEPLOY.md). |
+| `script/deploy-testnet.sh` | One-command testnet deploy + Blockscout verification + explorer links (`robinhood` default, `sepolia`); `DRY_RUN=1 DEPLOYER=0x…` simulates. |
+| `src/mocks/MockUSDG.sol` | Testnet-only 6-decimal token with open `mint`, fallback if the Paxos faucet is unavailable. |
 
 ### `openLoop(OpenParams)`
 
@@ -113,7 +117,7 @@ themselves prove the Arbitrum node accepts `TSTORE`; that is a documented chain-
   fee-100 pool were flat (≤ ~0.01% from the oracle) up to ~16 wstETH out. **This caps practical
   position size per transaction** (a 3x open on P buys 2P), which is why the tests use a 5 wstETH
   principal. Larger positions would need a different route (e.g. an aggregator) or several opens.
-- **No OpenZeppelin, no upgradeability.** Immutable owner/pool/oracle/router; minimal local interfaces.
+- **No OpenZeppelin, no upgradeability** in `CarryAccount`. Immutable owner/pool/oracle/router; minimal local interfaces. (`CarryVault` uses OpenZeppelin v5.4.0, vendored in `lib/openzeppelin-contracts` with only `contracts/` kept.)
 
 ## Not covered (on purpose)
 
@@ -218,3 +222,186 @@ What each test covers:
 | `test_factory_recordsAccount` | factory records the account, one per owner |
 | `test_rescue` | owner can pull stray tokens |
 | `test_carry_30days_logOnly` | informational, logs equity change over 30 days |
+
+---
+
+# CarryVault
+
+`src/CarryVault.sol` is the managed-vault product from `BUSINESS.md`: an ERC-4626 vault over a stablecoin
+(Paxos **USDG on Robinhood Chain** first, the same code for USDC or USDG on Arbitrum One). Users deposit;
+the Carry bot (`operator`) moves capital into allowlisted strategy contracts and marks their value; the
+vault charges **10% of gains above a high-water mark and no management fee**. Built on OpenZeppelin v5.4.0
+(`ERC4626`, `Ownable2Step`, `Pausable`, `ReentrancyGuard`, `SafeERC20`).
+
+## Design
+
+| Piece | How it works |
+| --- | --- |
+| Roles | `owner` (Ownable2Step: transfer + accept) configures everything. `operator` (the bot) can only call `operatorCall`, `approveTarget`, `reportDeployed`. |
+| Accounting | `totalAssets() = idleAssets() + deployedAssets`. Idle is the vault's own asset balance. |
+| Principal flows | `operatorCall(target, data, value)` measures the vault's asset balance before and after the call and books the difference to `deployedAssets` (out → deployed, back → returned). Moving money into a strategy never changes the share price. |
+| PnL marks | `reportDeployed(x)` may move `deployedAssets` by at most `maxReportChangeBps` (default 2%, owner max 10%) of its current value, and at most once per `minReportInterval` (default 1 h). A per-call bound alone could be defeated by calling it 50 times in one block; the interval makes it a per-window bound. |
+| Owner reconcile | `syncDeployed(x)` (owner only, unbounded) for flows that land outside `operatorCall`, e.g. an asynchronous bridge delivery. |
+| Operator limits | Target must be allowlisted by the owner. The asset token and the vault itself can never be a target (`allowTarget` and `operatorCall` both reject them), so the operator cannot `transfer`/`transferFrom`/`approve` vault funds directly. Allowances go through `approveTarget(token, spender, amount)`, which requires an allowlisted spender. `nonReentrant` and `whenNotPaused`. Reverts bubble up. |
+| Deposit cap | `depositCap` (owner-set) bounds `totalAssets()` after a deposit; above it `DepositCapExceeded`. `maxDeposit` reports the room left (0 while paused). |
+| Pause | `pause()` blocks deposits, mints and every operator action. **Withdrawals and redeems are never paused.** |
+| Withdrawals | Standard ERC-4626, served only from idle assets. If idle is short, `withdraw`/`redeem` revert with `InsufficientIdleAssets(needed, idle)`; the operator must unwind first. `maxWithdraw`/`maxRedeem` are capped by idle so they stay honest per EIP-4626. |
+| Inflation attack | OZ virtual shares with `_decimalsOffset() = 6` (shares have 12 decimals for a 6-decimal asset). |
+
+## Fee math
+
+Price per share, 1e18-scaled, normalised so a fresh vault reads exactly `1e18` (one asset per whole share):
+
+```
+v   = 10^6                                    (virtual shares)
+pps = (totalAssets + 1) × 1e18 × v / (supply + v)
+```
+
+When `pps > highWaterMark`:
+
+```
+gain      G = (totalAssets + 1) × (pps − hwm) / pps          (assets above the mark)
+fee       F = G × performanceFeeBps / 10_000
+feeShares s = F × (supply + v) / (totalAssets + 1 − F)       (so the s shares are worth exactly F after minting)
+hwm         = pps after minting
+```
+
+Example from the tests: 1,000 USDG deposited, +100 USDG gain → fee = 10 USDG (1% of starting TVL), the
+depositor keeps 1,090, HWM moves to 1.09. A second `harvest()` with no new gain mints nothing. After a loss
+nothing is charged until the price is back above the old mark, and then only on the part above it.
+
+- `harvest()` is permissionless. The fee is also accrued before every `deposit`/`mint`/`withdraw`/`redeem`
+  and before `setPerformanceFee`/`setFeeRecipient`.
+- `convertTo*`/`preview*` include pending fee shares, so previews equal execution and a late depositor is
+  never charged for gains made before they entered (tested).
+- If the supply is 0, the mark is reset to the current price instead of charging anyone.
+- `performanceFeeBps` default 1000 (10%), owner may set 0–2000.
+
+## Threat model
+
+| Actor | Can | Cannot |
+| --- | --- | --- |
+| Depositor | Deposit under the cap, withdraw idle assets at any time, even while paused. | Enter or exit at a pre-fee price; profit from a first-deposit donation. |
+| Operator (bot key) | Call allowlisted targets with vault funds; approve allowlisted spenders; mark PnL within ±2% per hour. | Call the asset token or the vault; approve a non-allowlisted spender; add targets; change fees, cap or roles; act while paused. |
+| Owner | Everything above plus allowlist, pause, fees (≤20%), cap, report bounds, `syncDeployed`. | Pause withdrawals of idle assets; mint shares other than through the fee. |
+
+Residual risks, stated plainly:
+
+- **The allowlist is the security boundary.** An allowlisted target that can send vault funds anywhere
+  (e.g. a generic router with an arbitrary recipient) lets a compromised operator drain what it approves.
+  Only allowlist strategy contracts that return funds to the vault.
+- **Operator marks are trusted within the bound.** A compromised operator can inflate `deployedAssets` by
+  up to 2% per hour and harvest 10% of that (≈ 0.2% of strategy TVL per hour) until the owner pauses.
+- **Owner is trusted.** `syncDeployed` is unbounded, and the owner chooses the allowlist. Use a multisig.
+- **Strategies must pull inside `operatorCall`.** A pull at any other time looks like a loss until reconciled.
+- **Deployed capital is not instantly withdrawable.** Exits depend on the operator unwinding.
+
+## Not covered
+
+- No onchain strategy adapters yet: the vault is the custody and accounting layer; strategies are
+  allowlisted contracts called through `operatorCall`. No withdrawal queue.
+- No timelock on owner actions, no guardian role separate from the owner.
+- `receive()` exists so `operatorCall` can forward `value`, but there is no rescue function for stray ETH
+  or non-asset tokens; the only way out is an `operatorCall` to an allowlisted target. Deliberate: a
+  generic rescue would be another path for vault funds to leave.
+- Fork-tested on the real USDG for deposit/withdraw only; operator flows are tested with a mock strategy.
+- Not audited (the business plan puts an audit before outside deposits).
+
+## Verified Robinhood Chain facts (2026-10-04)
+
+RPC `https://rpc.mainnet.chain.robinhood.com` answers, `cast chain-id` = **4663**, gas price ≈ 0.022 gwei.
+
+**Canonical Paxos USDG = `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`.**
+
+| | `0x5fc5360D…1d168` | `0x0A3B763d…3954F` |
+| --- | --- | --- |
+| `name()` / `symbol()` | "Global Dollar" / USDG (same name Paxos uses on Ethereum and Arbitrum) | "Paxos USDG" / USDG |
+| `decimals()` | 6 | 6 |
+| `totalSupply()` | 699,761,516 USDG | 1,100 USDG |
+| Proxy (EIP-1967 impl slot) | yes → impl `0x68184c44…66f8f`, UUPS; `owner()` `0xcFA0…4C6F`; `paused()` false | yes → impl `0x3a501325…863a0`, UUPS; `owner()` `0xf7e3…1F6C` |
+| Listed by Paxos docs (docs.paxos.com/guides/stablecoin/usdg/mainnet, "Robinhood Mainnet") | **yes** (supply control `0xdf5F…25D4`, OFT `0x0d54…28d1`) | no |
+| Listed by docs.robinhood.com/chain/contracts | **yes** | no |
+
+The second token is a small unofficial deployment with a look-alike name; do not use it.
+Paxos USDG on Arbitrum One is `0x004B506865409877C9fA29bfb1ebA929984B9bbC` ("Global Dollar", 6 decimals, checked with `cast`).
+
+Testnets (addresses from docs.paxos.com/guides/stablecoin/usdg/testnet, each checked with `cast`):
+
+| Chain | RPC check | Paxos testnet USDG |
+| --- | --- | --- |
+| Robinhood Chain testnet | `https://rpc.testnet.chain.robinhood.com/rpc`, chain id **46630** | `0x7E955252E15c84f5768B83c41a71F9eba181802F`: "Global Dollar", USDG, 6 dec, supply 57.3M, EIP-1967 proxy; testnet Blockscout API (`explorer.testnet.chain.robinhood.com/api`) answers and reports 4,109 holders |
+| Arbitrum Sepolia | chain id **421614** | `0xFFC95faa3d63Cde504a05B567C600B78C0b41892`: "Global Dollar", USDG, 6 dec, supply 2.1M |
+
+On Robinhood testnet, mainnet USDG `0x5fc5…` has no code; `0x0A3B…` has a proxy but its calls revert. Arbitrum Sepolia
+Aave v3: Pool `0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff` → `ADDRESSES_PROVIDER()` `0xB25a5D144626a0D488e52AE717A051a2E9997076`
+→ `getPriceOracle()` `0xEf95A6B9e88Bd509Fd67BA741cf2b263DaC65c00` (and `getPool()` returns the same Pool). Uniswap SwapRouter02
+`0x101F443B4d1b059569D643917553c771E1b9663E` has code (`factory()` `0x248A…188e`, `WETH9()` `0x980B…7c73`).
+
+Explorers: `explorer.chain.robinhood.com` failed the TLS handshake from here; Robinhood's docs link to
+Blockscout at `robinhoodchain.blockscout.com` (behind a Cloudflare challenge, so its `/api` could not be
+probed with curl), and Etherscan v2 lists chain 4663 as `robin.etherscan.io` (checked via
+`api.etherscan.io/v2/chainlist`). `foundry.toml` configures Etherscan v2 for 42161/421614/4663.
+
+## Vault tests
+
+```bash
+forge test --match-path test/CarryVault.t.sol -vv
+SKIP_ROBINHOOD_FORK=true forge test     # skip the Robinhood fork if its public RPC is down
+```
+
+The Robinhood fork test forks at the latest block by default (`ROBINHOOD_FORK_BLOCK`, `ROBINHOOD_RPC_URL`):
+the public RPC is not an archive node and rejects older blocks with "historical state … is not available".
+It funds a user from a large USDG holder via `vm.prank`, deposits 1,000 USDG, withdraws 250, redeems the rest
+and checks the user gets exactly 1,000 back.
+
+| Test | Checks |
+| --- | --- |
+| `test_initialState` | 12-decimal shares, pps = HWM = 1e18, defaults |
+| `test_depositWithdraw_roundTrip` | 1:1 shares, withdraw + redeem return everything |
+| `test_previewsMatchExecution_withPendingFee` | `previewDeposit`/`previewRedeem` equal execution while a fee is pending |
+| `test_depositCap` | `DepositCapExceeded`, `maxDeposit` = room left |
+| `test_pauseBlocksDepositButNotWithdraw` | paused: deposit/mint/operator actions revert, withdraw/redeem work |
+| `test_operatorCall_onlyAllowlisted_neverAsset` | non-allowlisted target, asset token and vault itself all rejected |
+| `test_operatorCall_tracksPrincipal_ppsUnchanged` | out/back flows tracked, pps unchanged, `InsufficientIdleAssets` until unwound |
+| `test_operatorCall_bubblesRevert` | target reverts propagate |
+| `test_approveTarget_onlyAllowlistedSpender` | approvals only to allowlisted spenders |
+| `test_reportDeployed_bounded_andRateLimited` | ±2% bound, 1 h interval, owner `syncDeployed` |
+| `test_harvest_feeMath_10pctGain` | 10% gain → fee worth 10 USDG (1% of TVL), HWM = 1.09, no second fee |
+| `test_harvest_noFeeAfterLossUntilRecovered` | HWM never moves down; fee only above the old mark |
+| `test_harvest_onDeposit_lateDepositorNotCharged` | fee accrued before a new deposit |
+| `test_setPerformanceFee_bounds_andAccruesFirst` | > 20% rejected; old rate applied to existing gain |
+| `test_inflationAttack_firstDepositorDonation` | 1-wei deposit + 100k donation: victim loses < 0.1%, attacker gets back less than they put in |
+| `test_onlyOwnerAndOperatorGuards` | every owner/operator function guarded, two-step ownership, zero-address checks |
+| `test_fork_robinhood_usdg_depositWithdraw` | real USDG on a Robinhood Chain fork |
+
+Full suite (`forge test`, 2026-10-04):
+
+```
+Ran 16 tests for test/CarryVault.t.sol:CarryVaultTest
+Suite result: ok. 16 passed; 0 failed; 0 skipped
+Ran 10 tests for test/CarryAccount.t.sol:CarryAccountForkTest
+Suite result: ok. 10 passed; 0 failed; 0 skipped
+Ran 1 test for test/CarryVault.t.sol:CarryVaultRobinhoodForkTest
+Suite result: ok. 1 passed; 0 failed; 0 skipped
+Ran 3 test suites in 8.60s (9.67s CPU time): 27 tests passed, 0 failed, 0 skipped (27 total tests)
+```
+
+## Deploy dry runs (simulated, not broadcast)
+
+Sender `0x…C0FFEE01` (empty) unless noted. Addresses depend on the deployer's nonce; a real deploy will give different ones.
+
+| Script | Chain (gas price read) | Gas | ETH | Result |
+| --- | --- | --- | --- | --- |
+| `DeployRobinhoodTestnet` | Robinhood testnet 46630 (0.01 gwei) | 3,905,408 | 0.000078 | vault over real testnet USDG; seed skipped (empty sender) |
+| `DeployRobinhoodTestnet`, sender = a real testnet USDG holder (`0x545F…b983`) | same | 4,028,032 | 0.000081 | vault + 1 USDG seed deposit, supply 1e12 shares |
+| `DeployRobinhoodTestnet`, `USE_MOCK_USDG=true` | same | 4,738,688 | 0.000095 | MockUSDG + vault + 1 mUSDG seed deposit |
+| `DeployArbitrum` | Arbitrum Sepolia 421614 (0.05 gwei) | 3,213,057 | 0.000321 | factory wired to Sepolia Aave Pool/oracle + SwapRouter02 |
+| `DeployArbitrumVault` | Arbitrum Sepolia (0.05 gwei) | 3,714,557 | 0.000376 | vault over Sepolia testnet USDG |
+| `DeployRobinhoodTestnet`, sender = project deployer `0x8c83…20Fa` (nonce 54, 0 USDG) | Robinhood testnet | 3,906,730 | 0.000078 | CarryVault `0x330677cDA0fc0C7a184A3a150fb08De973A9C4F1` |
+| same, `USE_MOCK_USDG=true` | Robinhood testnet | 4,740,267 | 0.000095 | MockUSDG `0x3306…C4F1`, CarryVault `0x172B6169285eE59CD24D1669517513c75A28236A`, 1 mUSDG seeded |
+| `DeployArbitrum`, sender = `0x8c83…20Fa` (nonce 0) | Arbitrum Sepolia | 3,211,588 | 0.000327 | CarryAccountFactory `0x71da6a936f1196881C236c62a084ddEB448772Ba` |
+| `DeployArbitrum` | Arbitrum One 42161 (0.02 gwei) | 3,146,945 | 0.000126 | factory, mainnet addresses |
+| `DeployRobinhoodVault` | Robinhood Chain 4663 (0.022 gwei) | 3,592,945 | 0.000160 | vault over USDG `0x5fc5…` |
+| `DeployArbitrumVault` | Arbitrum One (0.02 gwei) | 3,615,470 | 0.000145 | USDC vault |
+
+Commands: [`../DEPLOY.md`](../DEPLOY.md).

@@ -1,6 +1,7 @@
 [profile.default]
 src = "src"
 test = "test"
+script = "script"
 out = "out"
 libs = ["lib"]
 solc = "0.8.28"
@@ -8,12 +9,33 @@ evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
 via_ir = false
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std/=lib/forge-std/src/",
+]
 
 [lint]
 # Lints still run with `forge lint`; they are just not printed on every build.
 lint_on_build = false
 
+# Literal public RPCs so `--rpc-url <alias>` works without any env var.
+# Tests read ARB_RPC_URL / ROBINHOOD_RPC_URL themselves (with these same defaults).
 [rpc_endpoints]
-arbitrum = "${ARB_RPC_URL}"
+arbitrum = "https://arb1.arbitrum.io/rpc"
+arbitrum_sepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+robinhood = "https://rpc.mainnet.chain.robinhood.com"
+robinhood_testnet = "https://rpc.testnet.chain.robinhood.com/rpc"
+
+# Verification via the Etherscan v2 multichain API. One Etherscan v2 key works for all three chains
+# (Arbiscan, Sepolia Arbiscan and robin.etherscan.io are all on it); export it as ARBISCAN_API_KEY.
+# Robinhood Chain also has a Blockscout explorer (robinhoodchain.blockscout.com), usable without a key:
+# --verifier blockscout --verifier-url https://robinhoodchain.blockscout.com/api/
+# Robinhood Chain testnet (46630) is not on Etherscan v2; use its Blockscout (keyless):
+# --verifier blockscout --verifier-url https://explorer.testnet.chain.robinhood.com/api/
+# Only read when you pass --verify / run `forge verify-contract`.
+[etherscan]
+arbitrum = { key = "${ARBISCAN_API_KEY}", chain = 42161, url = "https://api.etherscan.io/v2/api?chainid=42161" }
+arbitrum_sepolia = { key = "${ARBISCAN_API_KEY}", chain = 421614, url = "https://api.etherscan.io/v2/api?chainid=421614" }
+robinhood = { key = "${ARBISCAN_API_KEY}", chain = 4663, url = "https://api.etherscan.io/v2/api?chainid=4663" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
