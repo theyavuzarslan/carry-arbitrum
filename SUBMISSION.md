@@ -3,7 +3,7 @@
 > **Hackathon:** Arbitrum Open House Singapore, Online Buildathon (HackQuest). Submissions close 4 Oct 2026, 18:59 (UTC+3).
 > **Tracks:** Overall prize (aiming at the Robinhood Chain reserved place) and Promising Products (AI agents, new financial primitives).
 > **Deployed:** CarryVault (USDG) on Robinhood Chain testnet at `0x330677cDA0fc0C7a184A3a150fb08De973A9C4F1`, source verified, holding a 1 USDG seed deposit. Details: [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
-> **Still to fill:** team `____` · demo video `____` · repo URL `____`.
+> **Repo:** https://github.com/theyavuzarslan/carry-arbitrum · **Still to fill:** team `____` · demo video `____`.
 
 Business and fee model: [BUSINESS.md](BUSINESS.md).
 
